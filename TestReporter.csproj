@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <Folder Include="Servise\IO\" />
-    <Folder Include="Servise\filtration\" />
     <Folder Include="UI\" />
   </ItemGroup>
 
