@@ -1,0 +1,50 @@
+/mnt/agents/output/TestReporter.Parser/bin/Debug/net8.0/TestReporter.Parser
+/mnt/agents/output/TestReporter.Parser/bin/Debug/net8.0/TestReporter.Parser.deps.json
+/mnt/agents/output/TestReporter.Parser/bin/Debug/net8.0/TestReporter.Parser.runtimeconfig.json
+/mnt/agents/output/TestReporter.Parser/bin/Debug/net8.0/TestReporter.Parser.dll
+/mnt/agents/output/TestReporter.Parser/bin/Debug/net8.0/TestReporter.Parser.pdb
+/mnt/agents/output/TestReporter.Parser/bin/Debug/net8.0/CsvHelper.dll
+/mnt/agents/output/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.csproj.AssemblyReference.cache
+/mnt/agents/output/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.GeneratedMSBuildEditorConfig.editorconfig
+/mnt/agents/output/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.AssemblyInfoInputs.cache
+/mnt/agents/output/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.AssemblyInfo.cs
+/mnt/agents/output/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.csproj.CoreCompileInputs.cache
+/mnt/agents/output/TestReporter.Parser/obj/Debug/net8.0/TestRepo.92F081A4.Up2Date
+/mnt/agents/output/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.dll
+/mnt/agents/output/TestReporter.Parser/obj/Debug/net8.0/refint/TestReporter.Parser.dll
+/mnt/agents/output/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.pdb
+/mnt/agents/output/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.genruntimeconfig.cache
+/mnt/agents/output/TestReporter.Parser/obj/Debug/net8.0/ref/TestReporter.Parser.dll
+/mnt/agents/output/TestReporter.Parser/bin/Debug/net8.0/ClosedXML.dll
+/mnt/agents/output/TestReporter.Parser/bin/Debug/net8.0/ClosedXML.Parser.dll
+/mnt/agents/output/TestReporter.Parser/bin/Debug/net8.0/DocumentFormat.OpenXml.dll
+/mnt/agents/output/TestReporter.Parser/bin/Debug/net8.0/DocumentFormat.OpenXml.Framework.dll
+/mnt/agents/output/TestReporter.Parser/bin/Debug/net8.0/ExcelNumberFormat.dll
+/mnt/agents/output/TestReporter.Parser/bin/Debug/net8.0/RBush.dll
+/mnt/agents/output/TestReporter.Parser/bin/Debug/net8.0/SixLabors.Fonts.dll
+/mnt/agents/output/TestReporter.Parser/bin/Debug/net8.0/System.IO.Packaging.dll
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/bin/Debug/net8.0/TestReporter.Parser
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/bin/Debug/net8.0/TestReporter.Parser.deps.json
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/bin/Debug/net8.0/TestReporter.Parser.runtimeconfig.json
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/bin/Debug/net8.0/TestReporter.Parser.dll
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/bin/Debug/net8.0/TestReporter.Parser.pdb
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/bin/Debug/net8.0/ClosedXML.dll
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/bin/Debug/net8.0/ClosedXML.Parser.dll
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/bin/Debug/net8.0/CsvHelper.dll
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/bin/Debug/net8.0/DocumentFormat.OpenXml.dll
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/bin/Debug/net8.0/DocumentFormat.OpenXml.Framework.dll
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/bin/Debug/net8.0/ExcelNumberFormat.dll
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/bin/Debug/net8.0/RBush.dll
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/bin/Debug/net8.0/SixLabors.Fonts.dll
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/bin/Debug/net8.0/System.IO.Packaging.dll
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.csproj.AssemblyReference.cache
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.GeneratedMSBuildEditorConfig.editorconfig
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.AssemblyInfoInputs.cache
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.AssemblyInfo.cs
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.csproj.CoreCompileInputs.cache
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.csproj.CopyComplete
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.dll
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/obj/Debug/net8.0/refint/TestReporter.Parser.dll
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.pdb
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/obj/Debug/net8.0/TestReporter.Parser.genruntimeconfig.cache
+/home/artem/Загрузки/Kimi_Agent_Парсер данных и отчёт (2)/TestReporter.Parser/obj/Debug/net8.0/ref/TestReporter.Parser.dll
