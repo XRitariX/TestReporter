@@ -9,8 +9,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Servise\filtration\**" />
+    <EmbeddedResource Remove="Servise\filtration\**" />
+    <None Remove="Servise\filtration\**" />
+    <Page Remove="Servise\filtration\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Servise\IO\" />
-    <Folder Include="Servise\filtration\" />
     <Folder Include="UI\" />
   </ItemGroup>
 
