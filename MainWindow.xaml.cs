@@ -8,6 +8,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using TestReporter.Models;
+using TestReporter.Servise;
 
 namespace TestReporter
 {
@@ -20,5 +22,6 @@ namespace TestReporter
         {
             InitializeComponent();
         }
+        
     }
 }
