@@ -45,7 +45,6 @@
                 <ColumnDefinition Width="360"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Left: Files -->
             <GroupBox Header="Загрузка файлов" Grid.Column="0" Margin="6">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="6" HorizontalAlignment="Left">
@@ -64,7 +63,6 @@
                 </DockPanel>
             </GroupBox>
 
-            <!-- Center: Preview -->
             <GroupBox Header="Предпросмотр" Grid.Column="1" Margin="6">
                 <DockPanel>
                     <TabControl x:Name="tabPreview" Margin="6">
@@ -89,7 +87,6 @@
                 </DockPanel>
             </GroupBox>
 
-            <!-- Right: Filters and Reports -->
             <StackPanel Grid.Column="2" Margin="6" Orientation="Vertical">
                 <GroupBox Header="Фильтры" Margin="0,0,0,8">
                     <StackPanel Margin="6">
