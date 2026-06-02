@@ -1,16 +1,21 @@
-using TestReporter.Parser.Models;
+﻿using TestReporter.Models;
+using System;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
+using System.Globalization;
 
 namespace TestReporter.Parser.Utils;
 
 public static class ColumnMapper
 {
-    private static readonly string[] IdKeywords = ["id", "ид", "идентификатор", "№"];
-    private static readonly string[] DateKeywords = ["время создания", "время", "дата", "time", "date", "created"];
-    private static readonly string[] GroupKeywords = ["номер группы", "группа", "group"];
-    private static readonly string[] FullNameKeywords = ["ваши фамилия имя отчество", "фамилия имя отчество", "фио", "фамилия", "имя", "отчество", "студент", "fio", "full name"];
-    private static readonly string[] TotalScoreKeywords = ["набрано баллов", "набрано", "total", "sum", "сумма"];
-    private static readonly string[] MaxScoreKeywords = ["всего баллов", "max", "maximum", "possible"];
-    private static readonly string[] ResultKeywords = ["результат теста", "результат", "result", "итог"];
+    private static readonly string[] IdKeywords = new string[] { "id", "ид", "идентификатор", "в№" };
+    private static readonly string[] DateKeywords = new string[] { "время создания", "время", "дата", "time", "date", "created" };
+    private static readonly string[] GroupKeywords = new string[] { "номер группы", "группа", "group" };
+    private static readonly string[] FullNameKeywords = new string[] { "ваши фамилия имя отчество", "фамилия имя отчество", "фио", "фамилия", "имя", "отчество", "студент", "fio", "full name" };
+    private static readonly string[] TotalScoreKeywords = new string[] { "набрано баллов", "набрано", "total", "sum", "сумма" };
+    private static readonly string[] MaxScoreKeywords = new string[] { "всего баллов", "max", "maximum", "possible" };
+    private static readonly string[] ResultKeywords = new string[] { "результат теста", "результат", "result", "итог" };
 
     private const string ScoreSuffix = "/ Баллы";
 
@@ -148,3 +153,4 @@ public static class ColumnMapper
         return false;
     }
 }
+

@@ -10,6 +10,10 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using TestReporter.Models;
 using TestReporter.Servise;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
+using System.Globalization;
 
 namespace TestReporter
 {

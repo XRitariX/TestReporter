@@ -1,6 +1,10 @@
-using ClosedXML.Excel;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 using System.Globalization;
-using TestReporter.Parser.Models;
+using ClosedXML.Excel;
+using TestReporter.Models;
 using TestReporter.Parser.Utils;
 
 namespace TestReporter.Parser.Parsers;
@@ -207,3 +211,4 @@ public class ExcelParser
         return null;
     }
 }
+

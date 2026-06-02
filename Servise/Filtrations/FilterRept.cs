@@ -1,9 +1,14 @@
-﻿using System;
+﻿/*
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TestReporter.Models;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
+using System.Globalization;
 
 namespace TestReporter.Servise.Filtrations
 {
@@ -32,3 +37,5 @@ namespace TestReporter.Servise.Filtrations
         }
     }
 }
+
+*/

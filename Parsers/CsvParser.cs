@@ -1,8 +1,11 @@
-using System.Globalization;
+﻿using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
-using TestReporter.Parser.Models;
+using TestReporter.Models;
 using TestReporter.Parser.Utils;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace TestReporter.Parser.Parsers;
 

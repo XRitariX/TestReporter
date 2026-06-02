@@ -1,4 +1,10 @@
-namespace TestReporter.Parser.Models;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
+using System.Globalization;
+
+namespace TestReporter.Models;
 
 public class ParsedFile
 {
@@ -14,3 +20,4 @@ public class ParsedFile
     public DateTime? EarliestDate => Records.Where(r => r.CreatedAt.HasValue).MinBy(r => r.CreatedAt)?.CreatedAt;
     public DateTime? LatestDate => Records.Where(r => r.CreatedAt.HasValue).MaxBy(r => r.CreatedAt)?.CreatedAt;
 }
+

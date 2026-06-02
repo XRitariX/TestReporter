@@ -1,11 +1,17 @@
-using TestReporter.Parser.Parsers;
+﻿using TestReporter.Parser.Parsers;
 using TestReporter.Parser.Reporting;
-
+using System;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
+using System.Globalization;
 namespace TestReporter.Parser;
 
-class Program
+internal static class Program
 {
-    static void Main(string[] args)
+    // Переименовано: раньше было static void Main(string[] args)
+    // Теперь — вспомогательный метод RunConsole; он не является точкой входа.
+    public static void RunConsole(string[] args)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         Console.WriteLine("TestReporter — Парсер + Генератор отчётов");
@@ -130,7 +136,7 @@ class Program
         }
     }
 
-    static void DisplayParseSummary(List<Models.ParsedFile> results)
+    private static void DisplayParseSummary(List<Models.ParsedFile> results)
     {
         Console.WriteLine($"Успешно: {results.Count}");
         Console.WriteLine(new string('-', 50));
@@ -185,3 +191,4 @@ class Program
         Console.WriteLine(new string('-', 50));
     }
 }
+

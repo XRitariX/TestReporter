@@ -1,4 +1,9 @@
-using TestReporter.Parser.Models;
+﻿using TestReporter.Models;
+using System;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
+using System.Globalization;
 
 namespace TestReporter.Parser.Parsers;
 

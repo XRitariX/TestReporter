@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
+using System.Globalization;
 
 namespace TestReporter.Models
 {
-    /// <summary>
-    /// Составной ключ уникальности согласно ТЗ (Студент + Дата + Тема + Вопрос).
-    /// </summary>
+
     public record TestRecordKey(
         string Student,
         DateTime? Date,
@@ -13,9 +15,7 @@ namespace TestReporter.Models
         string Question
     );
 
-    /// <summary>
-    /// Компаратор для ключа, обеспечивающий регистронезависимое сравнение строк.
-    /// </summary>
+
     public class TestRecordKeyComparer : IEqualityComparer<TestRecordKey>
     {
         public bool Equals(TestRecordKey? x, TestRecordKey? y)
