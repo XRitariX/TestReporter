@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "emka008l5GU=",
+  "dgSpecHash": "r4Q8yATe9rA=",
   "success": true,
   "projectFilePath": "C:\\VS проеты\\TestReporter\\TestReporter.csproj",
   "expectedPackageFiles": [
@@ -15,8 +15,11 @@
     "C:\\Users\\timof\\.nuget\\packages\\oxyplot.core\\2.2.0\\oxyplot.core.2.2.0.nupkg.sha512",
     "C:\\Users\\timof\\.nuget\\packages\\oxyplot.wpf\\2.2.0\\oxyplot.wpf.2.2.0.nupkg.sha512",
     "C:\\Users\\timof\\.nuget\\packages\\oxyplot.wpf.shared\\2.2.0\\oxyplot.wpf.shared.2.2.0.nupkg.sha512",
+    "C:\\Users\\timof\\.nuget\\packages\\pdfsharpcore\\1.3.36\\pdfsharpcore.1.3.36.nupkg.sha512",
     "C:\\Users\\timof\\.nuget\\packages\\rbush.signed\\4.0.0\\rbush.signed.4.0.0.nupkg.sha512",
+    "C:\\Users\\timof\\.nuget\\packages\\sharpziplib\\1.3.3\\sharpziplib.1.3.3.nupkg.sha512",
     "C:\\Users\\timof\\.nuget\\packages\\sixlabors.fonts\\1.0.0\\sixlabors.fonts.1.0.0.nupkg.sha512",
+    "C:\\Users\\timof\\.nuget\\packages\\sixlabors.imagesharp\\1.0.4\\sixlabors.imagesharp.1.0.4.nupkg.sha512",
     "C:\\Users\\timof\\.nuget\\packages\\system.io.packaging\\8.0.1\\system.io.packaging.8.0.1.nupkg.sha512"
   ],
   "logs": []

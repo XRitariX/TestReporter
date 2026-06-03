@@ -145,9 +145,12 @@ public static class ColumnMapper
 
     private static bool MatchesAny(string normalizedHeader, string[] keywords)
     {
+        if (string.IsNullOrEmpty(normalizedHeader))
+            return false;
+
         foreach (var keyword in keywords)
         {
-            if (normalizedHeader.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            if (normalizedHeader.Contains(keyword))
                 return true;
         }
         return false;

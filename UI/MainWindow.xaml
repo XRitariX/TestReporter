@@ -120,12 +120,12 @@
 
                 <GroupBox Header="Управление отчетами">
                     <StackPanel Margin="6">
-                        <Button Content="Сформировать отчет по группам" Click="OnGenerateReportClick" Margin="0,4" IsEnabled="False"/>
-                        <Button Content="Создать новый отчет" Click="OnCreateNewReportClick" Margin="0,4" IsEnabled="False"/>
-                        <Button Content="Обновить существующий отчет..." Click="OnUpdateReportClick" Margin="0,4" IsEnabled="False"/>
+                        <Button x:Name="btnGeneratePanel" Content="Сформировать отчет по группам" Click="OnGenerateReportClick" Margin="0,4" IsEnabled="{Binding IsEnabled, ElementName=btnGenerate}"/>
+                        <Button x:Name="btnNewReportPanel" Content="Создать новый отчет" Click="OnCreateNewReportClick" Margin="0,4" IsEnabled="{Binding IsEnabled, ElementName=btnNewReport}"/>
+                        <Button x:Name="btnUpdateReportPanel" Content="Обновить существующий отчет..." Click="OnUpdateReportClick" Margin="0,4" IsEnabled="{Binding IsEnabled, ElementName=btnUpdateReport}"/>
                         <Separator Margin="0,6"/>
-                        <Button Content="Экспорт в PDF" Click="OnExportPdfClick" Margin="0,4" IsEnabled="False"/>
-                        <Button Content="Печать" Click="OnPrintClick" Margin="0,4" IsEnabled="False"/>
+                        <Button x:Name="btnExportPdfPanel" Content="Экспорт в PDF" Click="OnExportPdfClick" Margin="0,4" IsEnabled="{Binding IsEnabled, ElementName=btnExportPdf}"/>
+                        <Button x:Name="btnPrintPanel" Content="Печать" Click="OnPrintClick" Margin="0,4" IsEnabled="{Binding IsEnabled, ElementName=btnPrint}"/>
                     </StackPanel>
                 </GroupBox>
             </StackPanel>
