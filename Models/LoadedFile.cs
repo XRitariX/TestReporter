@@ -4,9 +4,9 @@ namespace TestReporter.Models
 {
     public class LoadedFile
     {
-        public string FilePath { get; set; }
-        public string FileName { get; set; }
-        public string Format { get; set; }
-        public string Status { get; set; }
+        public string FilePath { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+        public string Format { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
     }
 }

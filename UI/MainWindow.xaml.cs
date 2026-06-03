@@ -20,7 +20,7 @@ namespace TestReporter
         private List<StudentAnswer> _allPreviewAnswers = new List<StudentAnswer>();
         private ObservableCollection<QuestionStat> _questionStats = new ObservableCollection<QuestionStat>();
         private bool _mappingApplied = false;
-        private bool _filtersPopulated = false;
+        //private bool _filtersPopulated = false;
         private Models.ColumnMapping? _currentMapping = null;
 
         public MainWindow()
@@ -50,132 +50,173 @@ namespace TestReporter
                     var headerCells = firstRow.CellsUsed().ToList();
                     var headers = headerCells.Select(c => c.GetString()?.Trim() ?? string.Empty).ToList();
 
-                    // detect meta columns
+                    // Используем текущий маппинг, если применён
                     int idxName = -1, idxGroup = -1, idxDate = -1;
                     var questionIndices = new List<int>();
 
-                    for (int i = 0; i < headers.Count; i++)
+                    if (_currentMapping != null && _mappingApplied)
                     {
-                        var h = headers[i].ToLowerInvariant();
-                        // If mapping provided, use mapping names to determine indices
-                        if (_currentMapping != null)
+                        var map = _currentMapping;
+                        for (int i = 0; i < headers.Count; i++)
                         {
-                            var map = _currentMapping;
-                        if (!string.IsNullOrWhiteSpace(map.NameColumn) && string.Equals(headers[i], map.NameColumn, StringComparison.OrdinalIgnoreCase)) idxName = i;
-                            else if (!string.IsNullOrWhiteSpace(map.GroupColumnName) && string.Equals(headers[i], map.GroupColumnName, StringComparison.OrdinalIgnoreCase)) idxGroup = i;
-                            else if (!string.IsNullOrWhiteSpace(map.DateColumnName) && string.Equals(headers[i], map.DateColumnName, StringComparison.OrdinalIgnoreCase)) idxDate = i;
-                            else if (map.QuestionColumns != null && map.QuestionColumns.Any(q => string.Equals(q, headers[i], StringComparison.OrdinalIgnoreCase)))
+                            var raw = headers[i];
+                            if (!string.IsNullOrWhiteSpace(map.NameColumn) && 
+                                string.Equals(raw, map.NameColumn, StringComparison.OrdinalIgnoreCase))
+                                idxName = i;
+                            else if (!string.IsNullOrWhiteSpace(map.GroupColumnName) && 
+                                     string.Equals(raw, map.GroupColumnName, StringComparison.OrdinalIgnoreCase))
+                                idxGroup = i;
+                            else if (!string.IsNullOrWhiteSpace(map.DateColumnName) && 
+                                     string.Equals(raw, map.DateColumnName, StringComparison.OrdinalIgnoreCase))
+                                idxDate = i;
+                            else if (map.QuestionColumns != null && 
+                                     map.QuestionColumns.Any(q => string.Equals(q, raw, StringComparison.OrdinalIgnoreCase)))
                             {
                                 questionIndices.Add(i);
                             }
-                            else
-                            {
-                                // fallback: heuristic
-                                if (h.Contains("фам") || h.Contains("имя") || h.Contains("фио") || h.Contains("your") || h.Contains("name")) idxName = i;
-                                else if (h.Contains("групп") || h.Contains("group")) idxGroup = i;
-                                else if (h.Contains("время") || h.Contains("дата") || h.Contains("time") || h.Contains("date")) idxDate = i;
-                                else if (h.Contains("результ") || h.Contains("итог") || h.Contains("всего") || h.Contains("набрано")) { }
-                                else questionIndices.Add(i);
-                            }
                         }
-                        else
+                    }
+                    else
+                    {
+                        // Автоматический маппинг
+                        for (int i = 0; i < headers.Count; i++)
                         {
-                            if (h.Contains("фам") || h.Contains("имя") || h.Contains("фио") || h.Contains("your") || h.Contains("name")) idxName = i;
-                            else if (h.Contains("групп") || h.Contains("group")) idxGroup = i;
-                            else if (h.Contains("время") || h.Contains("дата") || h.Contains("time") || h.Contains("date")) idxDate = i;
-                            else if (h.Contains("результ") || h.Contains("итог") || h.Contains("всего" ) || h.Contains("набрано"))
+                            var h = headers[i].ToLowerInvariant();
+                            if (h.Contains("фам") || h.Contains("имя") || h.Contains("фио") || h.Contains("name"))
+                                idxName = i;
+                            else if (h.Contains("групп") || h.Contains("group"))
+                                idxGroup = i;
+                            else if (h.Contains("время") || h.Contains("дата") || h.Contains("time") || h.Contains("date"))
+                                idxDate = i;
+                            else if (!h.Contains("результ") && !h.Contains("итог") && !h.Contains("всего") && !h.Contains("набрано"))
                             {
-                                // total/result columns - ignore as question columns
-                            }
-                            else
-                            {
-                                // treat as question column candidate
                                 questionIndices.Add(i);
                             }
                         }
                     }
 
-                    // iterate data rows
-                    foreach (var row in ws.RowsUsed().Skip(1))
+                        var usedRows = ws.RowsUsed().Skip(1);
+                    foreach (var row in usedRows)
                     {
-                        var cells = row.Cells(1, headers.Count).ToList();
-                        var studentName = idxName >= 0 && idxName < cells.Count ? cells[idxName].GetString() : string.Empty;
-                        var groupName = idxGroup >= 0 && idxGroup < cells.Count ? cells[idxGroup].GetString() : string.Empty;
+                        string studentName = null;
+                        string groupName = null;
                         DateTime? testDate = null;
-                        if (idxDate >= 0 && idxDate < cells.Count)
+
+                        // Получаем имя студента
+                        if (idxName >= 0)
                         {
-                            var s = cells[idxDate].GetString();
-                            if (DateTime.TryParse(s, out var dt)) testDate = dt;
+                            studentName = row.Cell(idxName + 1).GetString()?.Trim();
+                        }
+                        if (string.IsNullOrWhiteSpace(studentName))
+                            studentName = Path.GetFileNameWithoutExtension(path);
+
+                        // Получаем группу
+                        if (idxGroup >= 0)
+                        {
+                            groupName = row.Cell(idxGroup + 1).GetString()?.Trim();
                         }
 
+                        // Получаем дату
+                        if (idxDate >= 0)
+                        {
+                            var dateCell = row.Cell(idxDate + 1);
+                            try
+                            {
+                                if (dateCell.TryGetValue<DateTime>(out var dt))
+                                    testDate = dt;
+                            }
+                            catch { }
+                        }
+
+                        if (!testDate.HasValue)
+                            testDate = DateTime.UtcNow;
+
+                        // Обрабатываем каждый вопрос
                         foreach (var qi in questionIndices)
                         {
-                            string qName = headers[qi];
+                            var qName = qi < headers.Count ? headers[qi] : $"Q{qi}";
+                            var scoreCell = row.Cell(qi + 1);
                             int score = 0;
-                            if (qi < cells.Count)
+
+                            try
                             {
-                                var str = cells[qi].GetString();
-                                if (!int.TryParse(str, out score))
+                                if (scoreCell.TryGetValue<int>(out var intVal))
+                                    score = intVal;
+                                else if (scoreCell.TryGetValue<double>(out var dVal))
+                                    score = (int)dVal;
+                                else
                                 {
-                                    // check for digits in string
-                                    var digits = new string(str.Where(char.IsDigit).ToArray());
-                                    if (!int.TryParse(digits, out score)) score = 0;
+                                    var strVal = scoreCell.GetString();
+                                    if (!string.IsNullOrEmpty(strVal) && int.TryParse(strVal, out var parsed))
+                                        score = parsed;
                                 }
                             }
+                            catch { }
 
-                            var sa = new StudentAnswer
+                            yield return new StudentAnswer
                             {
-                                StudentName = string.IsNullOrWhiteSpace(studentName) ? Path.GetFileNameWithoutExtension(path) : studentName,
+                                StudentName = studentName,
                                 TopicName = Path.GetFileNameWithoutExtension(path),
                                 QuestionName = qName,
                                 Score = score,
                                 GroupName = groupName ?? string.Empty,
                                 TestDate = testDate
                             };
-                            yield return sa;
                         }
                     }
                 }
             }
-            else
+            else if (ext == ".csv" || ext == ".txt")
             {
-                // csv/txt
+                // CSV логика остается без изменений
                 string[] lines;
-                try { lines = File.ReadAllLines(path, Encoding.Default); } catch { yield break; }
+                try { lines = File.ReadAllLines(path, Encoding.Default); }
+                catch { yield break; }
+
                 if (lines.Length == 0) yield break;
+
                 var header = lines[0];
                 var sep = header.Contains(',') ? ',' : (header.Contains(';') ? ';' : '\t');
                 var headers = header.Split(sep).Select(s => s.Trim()).ToList();
 
                 int idxName = -1, idxGroup = -1, idxDate = -1;
                 var questionIndices = new List<int>();
+
                 for (int i = 0; i < headers.Count; i++)
                 {
                     var raw = headers[i];
                     var h = raw.ToLowerInvariant();
-                    if (_currentMapping != null)
+
+                    if (_currentMapping != null && _mappingApplied)
                     {
                         var map = _currentMapping;
-                        if (!string.IsNullOrWhiteSpace(map.NameColumn) && string.Equals(raw, map.NameColumn, StringComparison.OrdinalIgnoreCase)) idxName = i;
-                        else if (!string.IsNullOrWhiteSpace(map.GroupColumnName) && string.Equals(raw, map.GroupColumnName, StringComparison.OrdinalIgnoreCase)) idxGroup = i;
-                        else if (!string.IsNullOrWhiteSpace(map.DateColumnName) && string.Equals(raw, map.DateColumnName, StringComparison.OrdinalIgnoreCase)) idxDate = i;
-                        else if (map.QuestionColumns != null && map.QuestionColumns.Any(q => string.Equals(q, raw, StringComparison.OrdinalIgnoreCase))) questionIndices.Add(i);
-                        else
+                        if (!string.IsNullOrWhiteSpace(map.NameColumn) && 
+                            string.Equals(raw, map.NameColumn, StringComparison.OrdinalIgnoreCase))
+                            idxName = i;
+                        else if (!string.IsNullOrWhiteSpace(map.GroupColumnName) && 
+                                 string.Equals(raw, map.GroupColumnName, StringComparison.OrdinalIgnoreCase))
+                            idxGroup = i;
+                        else if (!string.IsNullOrWhiteSpace(map.DateColumnName) && 
+                                 string.Equals(raw, map.DateColumnName, StringComparison.OrdinalIgnoreCase))
+                            idxDate = i;
+                        else if (map.QuestionColumns != null && 
+                                 map.QuestionColumns.Any(q => string.Equals(q, raw, StringComparison.OrdinalIgnoreCase)))
                         {
-                            if (h.Contains("фам") || h.Contains("имя") || h.Contains("фио") || h.Contains("name")) idxName = i;
-                            else if (h.Contains("групп") || h.Contains("group")) idxGroup = i;
-                            else if (h.Contains("время") || h.Contains("дата") || h.Contains("time") || h.Contains("date")) idxDate = i;
-                            else if (h.Contains("результ") || h.Contains("итог") || h.Contains("всего") || h.Contains("набрано")) { }
-                            else questionIndices.Add(i);
+                            questionIndices.Add(i);
                         }
                     }
                     else
                     {
-                        if (h.Contains("фам") || h.Contains("имя") || h.Contains("фио") || h.Contains("name")) idxName = i;
-                        else if (h.Contains("групп") || h.Contains("group")) idxGroup = i;
-                        else if (h.Contains("время") || h.Contains("дата") || h.Contains("time") || h.Contains("date")) idxDate = i;
-                        else if (h.Contains("результ") || h.Contains("итог") || h.Contains("всего") || h.Contains("набрано")) { }
-                        else questionIndices.Add(i);
+                        if (h.Contains("фам") || h.Contains("имя") || h.Contains("фио") || h.Contains("name"))
+                            idxName = i;
+                        else if (h.Contains("групп") || h.Contains("group"))
+                            idxGroup = i;
+                        else if (h.Contains("время") || h.Contains("дата") || h.Contains("time") || h.Contains("date"))
+                            idxDate = i;
+                        else if (!h.Contains("результ") && !h.Contains("итог") && !h.Contains("всего") && !h.Contains("набрано"))
+                        {
+                            questionIndices.Add(i);
+                        }
                     }
                 }
 
@@ -185,25 +226,41 @@ namespace TestReporter
                     var studentName = idxName >= 0 && idxName < parts.Count ? parts[idxName] : string.Empty;
                     var groupName = idxGroup >= 0 && idxGroup < parts.Count ? parts[idxGroup] : string.Empty;
                     DateTime? testDate = null;
-                    if (idxDate >= 0 && idxDate < parts.Count && DateTime.TryParse(parts[idxDate], out var dt)) testDate = dt;
+
+                    if (idxDate >= 0 && idxDate < parts.Count)
+                    {
+                        var s = parts[idxDate];
+                        if (!string.IsNullOrEmpty(s) && DateTime.TryParse(s, out var dt))
+                            testDate = dt;
+                    }
+
+                    if (!testDate.HasValue)
+                        testDate = DateTime.UtcNow;
 
                     foreach (var qi in questionIndices)
                     {
                         var qName = qi < headers.Count ? headers[qi] : $"Q{qi}";
                         int score = 0;
+
                         if (qi < parts.Count)
                         {
                             var s = parts[qi];
-                            if (!int.TryParse(s, out score))
+                            if (!string.IsNullOrEmpty(s))
                             {
-                                var digits = new string(s.Where(char.IsDigit).ToArray());
-                                if (!int.TryParse(digits, out score)) score = 0;
+                                if (!int.TryParse(s, out score))
+                                {
+                                    var digits = new string(s.Where(char.IsDigit).ToArray());
+                                    if (!int.TryParse(digits, out score))
+                                        score = 0;
+                                }
                             }
                         }
 
                         yield return new StudentAnswer
                         {
-                            StudentName = string.IsNullOrWhiteSpace(studentName) ? Path.GetFileNameWithoutExtension(path) : studentName,
+                            StudentName = string.IsNullOrWhiteSpace(studentName) 
+                                ? Path.GetFileNameWithoutExtension(path) 
+                                : studentName,
                             TopicName = Path.GetFileNameWithoutExtension(path),
                             QuestionName = qName,
                             Score = score,
@@ -315,7 +372,8 @@ namespace TestReporter
         {
             var dlg = new ColumnMappingDialog();
             dlg.Owner = this;
-            // Attempt to detect headers from first loaded file
+
+            // Попытаемся обнаружить заголовки из первого загруженного файла
             var first = _loadedFiles.FirstOrDefault();
             if (first != null)
             {
@@ -401,20 +459,75 @@ namespace TestReporter
                             }
                         }
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            System.Windows.MessageBox.Show($"Ошибка при обработке {lf.FileName}: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                        });
+                    }
+
                     processed++;
-                    Dispatcher.Invoke(() => mainProgress.Value = (int)((double)processed / Math.Max(1, total) * 100));
+                    Dispatcher.Invoke(() =>
+                    {
+                        mainProgress.Value = (processed * 100) / total;
+                    });
                 }
             });
 
-            // После парсинга обновляем контролы фильтрации и показываем отфильтрованные данные.
-            // Первый раз заполняем без попытки сохранить старые выборы, потом сохраняем при повторных парсингах.
             Dispatcher.Invoke(() =>
             {
-                PopulateFilterControls(preserveSelections: _filtersPopulated);
+                // Заполняем фильтры
+                PopulateFilterControls(false);
+                
+                // Применяем фильтры (показываем ВСЕ данные по умолчанию)
                 ApplyCurrentFilters();
-                _filtersPopulated = true;
+
+                mainProgress.Value = 100;
+                txtStatus.Text = $"Загружено и обработано: {_allPreviewAnswers.Count} ответов";
+                UpdateButtonsState();
             });
+        }
+
+        // Новый метод: агрегирует StudentAnswer по студент-тема
+        private List<StudentAnswer> AggregateAnswers(List<StudentAnswer> allAnswers)
+        {
+            if (allAnswers.Count == 0)
+                return new List<StudentAnswer>();
+
+            var aggregated = new List<StudentAnswer>();
+
+            // Группируем по студент-группа-дата-тема
+            var grouped = allAnswers
+                .GroupBy(a => new { a.StudentName, a.GroupName, a.TestDate, a.TopicName })
+                .OrderBy(g => g.Key.TopicName)
+                .ThenBy(g => g.Key.GroupName ?? "")
+                .ThenBy(g => g.Key.StudentName)
+                .ThenBy(g => g.Key.TestDate)
+                .ToList();
+
+            foreach (var group in grouped)
+            {
+                // Суммируем баллы и считаем процент правильных
+                int totalScore = group.Sum(a => a.Score ?? 0);
+                int correctCount = group.Count(a => a.Score == 1);
+                int totalCount = group.Count();
+                double percentCorrect = totalCount > 0 ? (double)correctCount / totalCount * 100 : 0;
+
+                var aggregatedItem = new StudentAnswer
+                {
+                    StudentName = group.Key.StudentName,
+                    GroupName = group.Key.GroupName,
+                    TestDate = group.Key.TestDate,
+                    TopicName = group.Key.TopicName,
+                    QuestionName = $"[Сумма {group.Count()} вопросов]",
+                    Score = totalScore,
+                    AnswerText = $"{percentCorrect:F1}%"
+                };
+                aggregated.Add(aggregatedItem);
+            }
+
+            return aggregated;
         }
 
         private void PopulateFilterControls(bool preserveSelections = true)
@@ -436,6 +549,7 @@ namespace TestReporter
             icGroups.Items.Clear();
             icStudents.Items.Clear();
 
+            // Используем ВСЕ ответы, а не агрегированные
             var topics = _allPreviewAnswers.Select(a => a.TopicName ?? string.Empty).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(s => s);
             foreach (var t in topics)
             {
@@ -507,19 +621,21 @@ namespace TestReporter
                 query = query.Where(a => a.TestDate.HasValue && a.TestDate.Value.Date >= from && a.TestDate.Value.Date <= to);
             }
 
-            // Обновляем preview collection
+            var filteredList = query.ToList();
+
+            // Обновляем детальный preview (без агрегации) - ВСЕ ответы
             _previewAnswers.Clear();
-            foreach (var a in query)
+            foreach (var a in filteredList)
             {
                 _previewAnswers.Add(a);
             }
 
-            // Построим матричный превью
-            BuildMatrixPreview(query);
+            // Построим матричный превью (агрегированный по студент-тема)
+            BuildMatrixPreview(filteredList);
 
-            // Обновляем статистику по вопросам
+            // Обновляем статистику по вопросам (детальную, без агрегации)
             _questionStats.Clear();
-            var stats = _previewAnswers.GroupBy(x => new { x.TopicName, x.QuestionName })
+            var stats = filteredList.GroupBy(x => new { x.TopicName, x.QuestionName })
                 .Select(g => new QuestionStat {
                     Topic = g.Key.TopicName,
                     Question = g.Key.QuestionName,
@@ -552,23 +668,43 @@ namespace TestReporter
                 table.Columns.Add("Тема", typeof(string));
                 table.Columns.Add("Студент", typeof(string));
                 table.Columns.Add("Группа", typeof(string));
+                table.Columns.Add("Дата", typeof(string));
 
-                foreach (var q in questions) table.Columns.Add(q, typeof(string));
+                foreach (var q in questions) table.Columns.Add(q, typeof(int));
 
-                var groups = recs.GroupBy(r => new { r.TopicName, r.StudentName, r.GroupName });
-                foreach (var g in groups.OrderBy(x => x.Key.TopicName).ThenBy(x => x.Key.StudentName))
+                table.Columns.Add("Сумма", typeof(int));
+
+                // Агрегируем по студент-группа-дата-тема
+                var groups = recs.GroupBy(r => new { r.TopicName, r.StudentName, r.GroupName, r.TestDate });
+                foreach (var g in groups.OrderBy(x => x.Key.TopicName).ThenBy(x => x.Key.StudentName).ThenBy(x => x.Key.TestDate))
                 {
                     var row = table.NewRow();
                     row["Тема"] = g.Key.TopicName ?? string.Empty;
                     row["Студент"] = g.Key.StudentName ?? string.Empty;
                     row["Группа"] = g.Key.GroupName ?? string.Empty;
+                    row["Дата"] = g.Key.TestDate.HasValue ? g.Key.TestDate.Value.ToString("dd.MM.yyyy") : string.Empty;
+                    
+                    int rowSum = 0;
+                    bool hasAnyData = false;
                     foreach (var q in questions)
                     {
                         var ans = g.FirstOrDefault(x => string.Equals(x.QuestionName ?? string.Empty, q, StringComparison.OrdinalIgnoreCase));
-                        if (ans != null) row[q] = ans.Score.ToString();
-                        else row[q] = string.Empty;
+                        if (ans != null)
+                        {
+                            row[q] = ans.Score ?? 0;
+                            rowSum += ans.Score ?? 0;
+                            hasAnyData = true;
+                        }
+                        else
+                            row[q] = DBNull.Value;
                     }
-                    table.Rows.Add(row);
+                    
+                    // Добавляем строку только если есть хотя бы один ответ
+                    if (hasAnyData)
+                    {
+                        row["Сумма"] = rowSum;
+                        table.Rows.Add(row);
+                    }
                 }
 
                 dgPreviewMatrix.ItemsSource = table.DefaultView;
@@ -576,44 +712,94 @@ namespace TestReporter
             catch { dgPreviewMatrix.ItemsSource = null; }
         }
 
-        private async void OnGenerateReportClick(object sender, RoutedEventArgs e)
+        private void OnGenerateReportClick(object sender, RoutedEventArgs e)
         {
-            if (!_loadedFiles.Any())
+            if (_allPreviewAnswers.Count == 0)
             {
-                System.Windows.MessageBox.Show("Нужно загрузить файлы прежде чем формировать отчёт.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Нет данных для отчёта.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
+            // Собираем ParsedFiles из StudentAnswer
+            var topics = _allPreviewAnswers
+                .Select(a => a.TopicName)
+                .Distinct()
+                .ToList();
+
+            var parsedFiles = new List<TestReporter.Models.ParsedFile>();
+
+            foreach (var topic in topics)
+            {
+                var topicAnswers = _allPreviewAnswers
+                    .Where(a => a.TopicName == topic)
+                    .ToList();
+
+                var recordsDict = new Dictionary<(string, string, DateTime?), List<StudentAnswer>>();
+
+                // Группируем по студенту-группе-дате
+                foreach (var answer in topicAnswers)
+                {
+                    var key = (answer.StudentName, answer.GroupName ?? "", answer.TestDate);
+                    if (!recordsDict.ContainsKey(key))
+                        recordsDict[key] = new List<StudentAnswer>();
+                    recordsDict[key].Add(answer);
+                }
+
+                var records = new List<TestReporter.Models.TestRecord>();
+                var allQuestions = new HashSet<string>();
+
+                foreach (var kvp in recordsDict)
+                {
+                    var (studentName, groupName, testDate) = kvp.Key;
+                    var answers = kvp.Value;
+
+                    var testRecord = new TestReporter.Models.TestRecord
+                    {
+                        FullName = studentName,
+                        Group = string.IsNullOrWhiteSpace(groupName) ? null : groupName,
+                        CreatedAt = testDate,
+                        Topic = topic,
+                        Answers = new List<StudentAnswer>(answers)
+                    };
+                    records.Add(testRecord);
+
+                    foreach (var ans in answers)
+                        allQuestions.Add(ans.QuestionName);
+                }
+
+                var questionInfos = allQuestions.Select(q => new TestReporter.Models.QuestionInfo
+                {
+                    Name = q,
+                    Type = TestReporter.Models.QuestionType.Choice
+                }).ToList();
+
+                var parsedFile = new TestReporter.Models.ParsedFile
+                {
+                    Topic = topic,
+                    Records = records,
+                    Questions = questionInfos
+                };
+                parsedFiles.Add(parsedFile);
+            }
+
+            // Диалог сохранения
             var sfd = new Microsoft.Win32.SaveFileDialog();
             sfd.Filter = "Excel Workbook|*.xlsx";
-            sfd.FileName = "Report.xlsx";
-            if (sfd.ShowDialog() != true) return;
+            sfd.DefaultExt = ".xlsx";
+            sfd.FileName = $"report_{DateTime.Now:yyyyMMdd_HHmmss}";
 
-            txtStatus.Text = "Генерация отчёта...";
-            mainProgress.Value = 0;
-            IsEnabled = false;
-
-            try
+            if (sfd.ShowDialog() == true)
             {
-                await Task.Run(() =>
+                try
                 {
-                    // write workbook
-                    GenerateReportFile(sfd.FileName);
-                    Dispatcher.Invoke(() => mainProgress.Value = 100);
-                });
-
-                txtStatus.Text = $"Отчёт сохранён: {sfd.FileName}";
-                System.Windows.MessageBox.Show($"Отчёт сохранён: {sfd.FileName}", "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                System.Windows.MessageBox.Show($"Ошибка при генерации отчёта: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                txtStatus.Text = "Ошибка генерации отчёта";
-            }
-            finally
-            {
-                IsEnabled = true;
-                mainProgress.Value = 0;
+                    var generator = new TestReporter.Parser.Reporting.ReportGenerator();
+                    generator.GenerateReport(parsedFiles, sfd.FileName);
+                    System.Windows.MessageBox.Show("Отчёт успешно создан!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"Ошибка при создании отчёта: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
@@ -653,96 +839,192 @@ namespace TestReporter
 
         private void OnUpdateReportClick(object sender, RoutedEventArgs e)
         {
+            if (_allPreviewAnswers.Count == 0)
+            {
+                System.Windows.MessageBox.Show("Нет данных для обновления отчёта.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             var ofd = new Microsoft.Win32.OpenFileDialog();
             ofd.Filter = "Excel|*.xlsx;*.xls";
             if (ofd.ShowDialog() != true) return;
 
-            var file = ofd.FileName;
+            var filePath = ofd.FileName;
             try
             {
                 // backup
-                var bak = file + ".bak";
-                try { File.Copy(file, bak, true); } catch { }
-                GenerateReportFile(file);
-                txtStatus.Text = $"Отчёт обновлён: {file}";
-                System.Windows.MessageBox.Show($"Отчёт обновлён: {file}", "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
+                var bak = filePath + ".bak";
+                try { File.Copy(filePath, bak, true); } catch { }
+
+                // Собираем ParsedFiles из текущих данных
+                var topics = _allPreviewAnswers
+                    .Select(a => a.TopicName)
+                    .Distinct()
+                    .ToList();
+
+                var parsedFiles = new List<TestReporter.Models.ParsedFile>();
+
+                foreach (var topic in topics)
+                {
+                    var topicAnswers = _allPreviewAnswers
+                        .Where(a => a.TopicName == topic)
+                        .ToList();
+
+                    var recordsDict = new Dictionary<(string, string, DateTime?), List<StudentAnswer>>();
+
+                    foreach (var answer in topicAnswers)
+                    {
+                        var key = (answer.StudentName, answer.GroupName ?? "", answer.TestDate);
+                        if (!recordsDict.ContainsKey(key))
+                            recordsDict[key] = new List<StudentAnswer>();
+                        recordsDict[key].Add(answer);
+                    }
+
+                    var records = new List<TestReporter.Models.TestRecord>();
+                    var allQuestions = new HashSet<string>();
+
+                    foreach (var kvp in recordsDict)
+                    {
+                        var (studentName, groupName, testDate) = kvp.Key;
+                        var answers = kvp.Value;
+
+                        var testRecord = new TestReporter.Models.TestRecord
+                        {
+                            FullName = studentName,
+                            Group = string.IsNullOrWhiteSpace(groupName) ? null : groupName,
+                            CreatedAt = testDate,
+                            Topic = topic,
+                            Answers = new List<StudentAnswer>(answers)
+                        };
+                        records.Add(testRecord);
+
+                        foreach (var ans in answers)
+                            allQuestions.Add(ans.QuestionName);
+                    }
+
+                    var questionInfos = allQuestions.Select(q => new TestReporter.Models.QuestionInfo
+                    {
+                        Name = q,
+                        Type = TestReporter.Models.QuestionType.Choice
+                    }).ToList();
+
+                    var parsedFile = new TestReporter.Models.ParsedFile
+                    {
+                        Topic = topic,
+                        Records = records,
+                        Questions = questionInfos
+                    };
+                    parsedFiles.Add(parsedFile);
+                }
+
+                // Перезаписываем отчёт
+                var generator = new TestReporter.Parser.Reporting.ReportGenerator();
+                generator.GenerateReport(parsedFiles, filePath);
+                
+                txtStatus.Text = $"Отчёт обновлён: {filePath}";
+                System.Windows.MessageBox.Show($"Отчёт обновлён: {filePath}", "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Ошибка обновления: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"Ошибка обновления: {ex.Message}\n\n{ex.StackTrace}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void OnExportPdfClick(object sender, RoutedEventArgs e)
         {
-            // Экспорт в PDF через PdfSharpCore: формируем простой документ с таблицей
+            if (_allPreviewAnswers.Count == 0)
+            {
+                System.Windows.MessageBox.Show("Нет данных для экспорта.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             var sfd = new Microsoft.Win32.SaveFileDialog();
             sfd.Filter = "PDF file|*.pdf";
-            sfd.FileName = "Report.pdf";
+            sfd.FileName = $"report_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
             if (sfd.ShowDialog() != true) return;
 
             try
             {
-                var matrix = new List<string[]>();
-                if (dgPreviewMatrix.ItemsSource is System.Data.DataView dv)
+                // Собираем ParsedFiles из текущих данных
+                var topics = _allPreviewAnswers
+                    .Select(a => a.TopicName)
+                    .Distinct()
+                    .ToList();
+
+                var parsedFiles = new List<TestReporter.Models.ParsedFile>();
+
+                foreach (var topic in topics)
                 {
-                    var cols = dv.Table.Columns.Cast<System.Data.DataColumn>().Select(c => c.ColumnName).ToArray();
-                    matrix.Add(cols);
-                    foreach (System.Data.DataRowView drv in dv)
+                    var topicAnswers = _allPreviewAnswers
+                        .Where(a => a.TopicName == topic)
+                        .ToList();
+
+                    var recordsDict = new Dictionary<(string, string, DateTime?), List<StudentAnswer>>();
+
+                    foreach (var answer in topicAnswers)
                     {
-                        matrix.Add(cols.Select(c => drv.Row[c]?.ToString() ?? string.Empty).ToArray());
+                        var key = (answer.StudentName, answer.GroupName ?? "", answer.TestDate);
+                        if (!recordsDict.ContainsKey(key))
+                            recordsDict[key] = new List<StudentAnswer>();
+                        recordsDict[key].Add(answer);
                     }
-                }
-                else
-                {
-                    matrix.Add(new[] { "Тема", "Студент", "Вопрос", "Балл", "Группа", "Дата" });
-                    foreach (var r in _previewAnswers)
-                        matrix.Add(new[] { r.TopicName ?? string.Empty, r.StudentName ?? string.Empty, r.QuestionName ?? string.Empty, r.Score.ToString(), r.GroupName ?? string.Empty, r.TestDate?.ToString("yyyy-MM-dd") ?? string.Empty });
-                }
 
-                // Создадим PDF документ
-                using (var doc = new PdfSharpCore.Pdf.PdfDocument())
-                {
-                    var page = doc.AddPage();
-                    page.Size = PdfSharpCore.PageSize.A4;
-                    var gfx = PdfSharpCore.Drawing.XGraphics.FromPdfPage(page);
-                    try
+                    var records = new List<TestReporter.Models.TestRecord>();
+                    var allQuestions = new HashSet<string>();
+
+                    foreach (var kvp in recordsDict)
                     {
-                        var font = new PdfSharpCore.Drawing.XFont("Arial", 10);
-                        double y = 40;
-                        double lineHeight = 16;
-                        double marginLeft = 40;
-                        double marginRight = 40;
-                        double usableWidth = page.Width - marginLeft - marginRight;
+                        var (studentName, groupName, testDate) = kvp.Key;
+                        var answers = kvp.Value;
 
-                        foreach (var row in matrix)
+                        var testRecord = new TestReporter.Models.TestRecord
                         {
-                            string line = string.Join("  ", row.Select(c => c?.Replace('\n', ' ') ?? string.Empty));
-                            // Draw using TopLeft alignment into a rectangle to avoid baseline errors
-                            gfx.DrawString(line, font, PdfSharpCore.Drawing.XBrushes.Black, new PdfSharpCore.Drawing.XRect(marginLeft, y, usableWidth, lineHeight), PdfSharpCore.Drawing.XStringFormats.TopLeft);
-                            y += lineHeight;
-                            if (y > page.Height - 40)
-                            {
-                                // start a new page
-                                gfx.Dispose();
-                                page = doc.AddPage();
-                                page.Size = PdfSharpCore.PageSize.A4;
-                                gfx = PdfSharpCore.Drawing.XGraphics.FromPdfPage(page);
-                                y = 40;
-                            }
-                        }
-                    }
-                    finally { gfx.Dispose(); }
+                            FullName = studentName,
+                            Group = string.IsNullOrWhiteSpace(groupName) ? null : groupName,
+                            CreatedAt = testDate,
+                            Topic = topic,
+                            Answers = new List<StudentAnswer>(answers)
+                        };
+                        records.Add(testRecord);
 
-                    using (var ms = new MemoryStream())
-                    {
-                        doc.Save(ms);
-                        File.WriteAllBytes(sfd.FileName, ms.ToArray());
+                        foreach (var ans in answers)
+                            allQuestions.Add(ans.QuestionName);
                     }
+
+                    var questionInfos = allQuestions.Select(q => new TestReporter.Models.QuestionInfo
+                    {
+                        Name = q,
+                        Type = TestReporter.Models.QuestionType.Choice
+                    }).ToList();
+
+                    var parsedFile = new TestReporter.Models.ParsedFile
+                    {
+                        Topic = topic,
+                        Records = records,
+                        Questions = questionInfos
+                    };
+                    parsedFiles.Add(parsedFile);
                 }
 
-                txtStatus.Text = $"PDF экспорт сохранён: {sfd.FileName}";
-                System.Windows.MessageBox.Show($"PDF экспорт сохранён: {sfd.FileName}", "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
+                // Генерируем Excel временный файл для конвертации в PDF
+                var tempExcelPath = Path.Combine(Path.GetTempPath(), $"temp_report_{Guid.NewGuid()}.xlsx");
+                try
+                {
+                    var generator = new TestReporter.Parser.Reporting.ReportGenerator();
+                    generator.GenerateReport(parsedFiles, tempExcelPath);
+
+                    // Конвертируем Excel в PDF используя SelectPdf или другую библиотеку
+                    // Пока используем простой текстовый PDF с данными из листов
+                    ExportExcelToPdf(tempExcelPath, sfd.FileName);
+
+                    txtStatus.Text = $"PDF экспорт сохранён: {sfd.FileName}";
+                    System.Windows.MessageBox.Show($"PDF экспорт сохранён: {sfd.FileName}", "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                finally
+                {
+                    if (File.Exists(tempExcelPath))
+                        File.Delete(tempExcelPath);
+                }
             }
             catch (Exception ex)
             {
@@ -750,148 +1032,264 @@ namespace TestReporter
             }
         }
 
-        private void OnPrintClick(object sender, RoutedEventArgs e)
+        private void ExportExcelToPdf(string excelPath, string pdfPath)
         {
-            var pd = new System.Windows.Controls.PrintDialog();
-            if (pd.ShowDialog() == true)
+            using (var workbook = new XLWorkbook(excelPath))
             {
-                // печатаем текущую вкладку (матрицу, если активна)
-                var item = tabPreview.SelectedItem as TabItem;
-                if (item != null && item.Header != null && item.Header.ToString().Contains("Матрич"))
+                using (var doc = new PdfSharpCore.Pdf.PdfDocument())
                 {
-                    pd.PrintVisual(dgPreviewMatrix, "Печать матрицы");
-                }
-                else
-                {
-                    pd.PrintVisual(dgPreviewDetail, "Печать превью");
-                }
-                txtStatus.Text = "Документ отправлен на печать.";
-            }
-        }
-
-        // Вспомогательный метод: формирует excel-файл с матрицей и статистикой
-        private void GenerateReportFile(string filePath)
-        {
-            // собираем текущие данные из _previewAnswers и _questionStats
-            var recs = _previewAnswers.ToList();
-            var questions = recs.Select(r => r.QuestionName ?? string.Empty).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
-
-            using (var wb = new ClosedXML.Excel.XLWorkbook())
-            {
-                var ws = wb.Worksheets.Add("Matrix");
-                int col = 1;
-                ws.Cell(1, col++).Value = "Тема";
-                ws.Cell(1, col++).Value = "Студент";
-                ws.Cell(1, col++).Value = "Группа";
-                foreach (var q in questions)
-                {
-                    ws.Cell(1, col++).Value = q;
-                }
-
-                var groups = recs.GroupBy(r => new { r.TopicName, r.StudentName, r.GroupName }).OrderBy(g => g.Key.TopicName).ThenBy(g => g.Key.StudentName).ToList();
-                int row = 2;
-                foreach (var g in groups)
-                {
-                    col = 1;
-                    ws.Cell(row, col++).Value = g.Key.TopicName ?? string.Empty;
-                    ws.Cell(row, col++).Value = g.Key.StudentName ?? string.Empty;
-                    ws.Cell(row, col++).Value = g.Key.GroupName ?? string.Empty;
-                    foreach (var q in questions)
+                    foreach (var worksheet in workbook.Worksheets)
                     {
-                        var ans = g.FirstOrDefault(x => string.Equals(x.QuestionName ?? string.Empty, q, StringComparison.OrdinalIgnoreCase));
-                        ws.Cell(row, col++).Value = ans != null ? ans.Score : (int?)null;
+                        ExportWorksheetToPdf(worksheet, doc);
                     }
-                    row++;
-                }
 
-                var ws2 = wb.Worksheets.Add("QuestionStats");
-                ws2.Cell(1, 1).Value = "Тема";
-                ws2.Cell(1, 2).Value = "Вопрос";
-                ws2.Cell(1, 3).Value = "Правильных";
-                ws2.Cell(1, 4).Value = "Всего";
-                ws2.Cell(1, 5).Value = "% правильных";
-                int r2 = 2;
-                foreach (var s in _questionStats)
-                {
-                    ws2.Cell(r2, 1).Value = s.Topic;
-                    ws2.Cell(r2, 2).Value = s.Question;
-                    ws2.Cell(r2, 3).Value = s.CorrectCount;
-                    ws2.Cell(r2, 4).Value = s.TotalCount;
-                    ws2.Cell(r2, 5).Value = Math.Round(s.Percent, 2);
-                    r2++;
+                    doc.Save(pdfPath);
                 }
-
-                wb.SaveAs(filePath);
             }
         }
 
-        // Простая реализация PDF: создаёт текстовый PDF через поток (очень базово).
-        // Для полноценного PDF лучше подключить библиотеку (PdfSharp/MigraDoc или iText7).
-        private void GeneratePdfFile(string path, List<string> matrixLines, List<string> statsLines)
+        private void ExportWorksheetToPdf(IXLWorksheet worksheet, PdfSharpCore.Pdf.PdfDocument doc)
         {
-            // Попытка создать PDF без сторонних пакетов — упакуем текст в формат PDF минимально.
-            // Это не полноценный PDF — но создаёт файл, совместимый с простейшим viewer.
-            using (var fs = new FileStream(path, FileMode.Create, FileAccess.Write))
-            using (var bw = new BinaryWriter(fs, Encoding.UTF8))
-            {
-                // Заголовок PDF (очень минимальный, не соответствует стандарту полностью).
-                var content = new StringBuilder();
-                content.AppendLine("Matrix:");
-                foreach (var l in matrixLines) content.AppendLine(l);
-                content.AppendLine();
-                content.AppendLine("Stats:");
-                foreach (var l in statsLines) content.AppendLine(l);
+            var page = doc.AddPage();
+            page.Size = PdfSharpCore.PageSize.A4;
+            var gfx = PdfSharpCore.Drawing.XGraphics.FromPdfPage(page);
 
-                var bytes = Encoding.UTF8.GetBytes(content.ToString());
-                bw.Write(bytes);
-            }
-        }
-
-        private StudentAnswer ParseFileSimple(string filePath)
-        {
-            // простой парсер для CSV / TXT — читает первые 3 непустых строки: ФИО, балл, дата
-            var lines = new string[0];
             try
             {
-                lines = File.ReadAllLines(filePath, Encoding.Default).Where(l => !string.IsNullOrWhiteSpace(l)).ToArray();
-            }
-            catch { }
+                var headerFont = new PdfSharpCore.Drawing.XFont("Arial", 12, PdfSharpCore.Drawing.XFontStyle.Bold);
+                var regularFont = new PdfSharpCore.Drawing.XFont("Arial", 9);
+                double y = 40;
+                double lineHeight = 14;
+                double marginLeft = 20;
+                double marginRight = 20;
+                double usableWidth = page.Width - marginLeft - marginRight;
+                double maxY = page.Height - 40;
 
-            var sa = new StudentAnswer();
-            sa.TopicName = Path.GetFileNameWithoutExtension(filePath);
-            sa.QuestionName = "Вопрос";
-            sa.GroupName = string.Empty;
-            sa.Score = 0;
-            sa.TestDate = null;
+                // Заголовок листа
+                gfx.DrawString($"Лист: {worksheet.Name}", headerFont, PdfSharpCore.Drawing.XBrushes.Black,
+                    new PdfSharpCore.Drawing.XRect(marginLeft, y, usableWidth, lineHeight), PdfSharpCore.Drawing.XStringFormats.TopLeft);
+                y += lineHeight * 1.5;
 
-            if (lines.Length > 0) sa.StudentName = lines[0].Trim();
-            if (lines.Length > 1)
-            {
-                if (int.TryParse(lines[1].Trim(), out int sc)) sa.Score = sc;
-                else
+                // Таблица
+                var usedRows = worksheet.RowsUsed();
+                foreach (var row in usedRows)
                 {
-                    var digits = new string(lines[1].Where(char.IsDigit).ToArray());
-                    if (int.TryParse(digits, out sc)) sa.Score = sc;
+                    var cells = row.CellsUsed();
+                    var rowText = string.Join(" | ", cells.Select(c => {
+                        var val = c.GetString();
+                        return !string.IsNullOrEmpty(val) ? val.Replace('\n', ' ') : string.Empty;
+                    }));                    // Форматируем текст для размера страницы
+                    if (rowText.Length > 150)
+                        rowText = rowText.Substring(0, 147) + "...";
+
+                    var font = row.RowNumber() == 1 ? headerFont : regularFont;
+                    gfx.DrawString(rowText, font, PdfSharpCore.Drawing.XBrushes.Black,
+                        new PdfSharpCore.Drawing.XRect(marginLeft, y, usableWidth, lineHeight), PdfSharpCore.Drawing.XStringFormats.TopLeft);
+
+                    y += lineHeight;
+
+                    // Переход на новую страницу
+                    if (y > maxY)
+                    {
+                        gfx.Dispose();
+                        page = doc.AddPage();
+                        page.Size = PdfSharpCore.PageSize.A4;
+                        gfx = PdfSharpCore.Drawing.XGraphics.FromPdfPage(page);
+                        y = 40;
+                    }
                 }
             }
-            if (lines.Length > 2 && DateTime.TryParse(lines[2].Trim(), out DateTime dt)) sa.TestDate = dt;
-            if (string.IsNullOrWhiteSpace(sa.StudentName)) sa.StudentName = Path.GetFileNameWithoutExtension(filePath);
+            finally
+            {
+                gfx.Dispose();
+            }
+        }
 
-            return sa;
+        private void PrintExcelWorkbook(string excelPath, System.Windows.Controls.PrintDialog printDialog)
+        {
+            // Создаём FlowDocument для печати
+            var doc = new System.Windows.Documents.FlowDocument();
+            doc.PageHeight = printDialog.PrintableAreaHeight;
+            doc.PageWidth = printDialog.PrintableAreaWidth;
+            doc.PagePadding = new Thickness(20);
+
+            using (var workbook = new XLWorkbook(excelPath))
+            {
+                foreach (var worksheet in workbook.Worksheets)
+                {
+                    // Заголовок листа
+                    var heading = new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"Лист: {worksheet.Name}"))
+                    {
+                        FontSize = 14,
+                        FontWeight = System.Windows.FontWeights.Bold,
+                        Margin = new Thickness(0, 10, 0, 10)
+                    };
+                    doc.Blocks.Add(heading);
+
+                    // Таблица
+                    var table = new System.Windows.Documents.Table();
+                    table.BorderThickness = new Thickness(0.5);
+                    table.BorderBrush = System.Windows.Media.Brushes.Gray;
+
+                    var usedRows = worksheet.RowsUsed().ToList();
+                    if (usedRows.Any())
+                    {
+                        var firstRow = usedRows.First();
+                        int colCount = firstRow.CellsUsed().Count();
+
+                        for (int i = 0; i < colCount; i++)
+                        {
+                            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new GridLength(1, GridUnitType.Star) });
+                        }
+
+                        int rowNum = 0;
+                        foreach (var row in usedRows)
+                        {
+                            var trg = new System.Windows.Documents.TableRowGroup();
+                            var tr = new System.Windows.Documents.TableRow();
+
+                            var cells = row.CellsUsed();
+                            foreach (var cell in cells)
+                            {
+                                var para = new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(cell.GetString() ?? ""))
+                                {
+                                    FontSize = rowNum == 0 ? 10 : 9,
+                                    FontWeight = rowNum == 0 ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.Normal
+                                };
+                                var tc = new System.Windows.Documents.TableCell(para)
+                                {
+                                    BorderThickness = new Thickness(0.5),
+                                    BorderBrush = System.Windows.Media.Brushes.Gray,
+                                    Padding = new Thickness(2)
+                                };
+                                tr.Cells.Add(tc);
+                            }
+                            trg.Rows.Add(tr);
+                            table.RowGroups.Add(trg);
+                            rowNum++;
+                        }
+                    }
+
+                    doc.Blocks.Add(table);
+                    doc.Blocks.Add(new System.Windows.Documents.Paragraph()); // Пустая строка между листами
+                }
+            }
+
+            printDialog.PrintDocument(((System.Windows.Documents.IDocumentPaginatorSource)doc).DocumentPaginator, "Отчёт");
+        }
+
+        private void OnPrintClick(object sender, RoutedEventArgs e)
+        {
+            if (_allPreviewAnswers.Count == 0)
+            {
+                System.Windows.MessageBox.Show("Нет данных для печати.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                // Собираем ParsedFiles из текущих данных
+                var topics = _allPreviewAnswers
+                    .Select(a => a.TopicName)
+                    .Distinct()
+                    .ToList();
+
+                var parsedFiles = new List<TestReporter.Models.ParsedFile>();
+
+                foreach (var topic in topics)
+                {
+                    var topicAnswers = _allPreviewAnswers
+                        .Where(a => a.TopicName == topic)
+                        .ToList();
+
+                    var recordsDict = new Dictionary<(string, string, DateTime?), List<StudentAnswer>>();
+
+                    foreach (var answer in topicAnswers)
+                    {
+                        var key = (answer.StudentName, answer.GroupName ?? "", answer.TestDate);
+                        if (!recordsDict.ContainsKey(key))
+                            recordsDict[key] = new List<StudentAnswer>();
+                        recordsDict[key].Add(answer);
+                    }
+
+                    var records = new List<TestReporter.Models.TestRecord>();
+                    var allQuestions = new HashSet<string>();
+
+                    foreach (var kvp in recordsDict)
+                    {
+                        var (studentName, groupName, testDate) = kvp.Key;
+                        var answers = kvp.Value;
+
+                        var testRecord = new TestReporter.Models.TestRecord
+                        {
+                            FullName = studentName,
+                            Group = string.IsNullOrWhiteSpace(groupName) ? null : groupName,
+                            CreatedAt = testDate,
+                            Topic = topic,
+                            Answers = new List<StudentAnswer>(answers)
+                        };
+                        records.Add(testRecord);
+
+                        foreach (var ans in answers)
+                            allQuestions.Add(ans.QuestionName);
+                    }
+
+                    var questionInfos = allQuestions.Select(q => new TestReporter.Models.QuestionInfo
+                    {
+                        Name = q,
+                        Type = TestReporter.Models.QuestionType.Choice
+                    }).ToList();
+
+                    var parsedFile = new TestReporter.Models.ParsedFile
+                    {
+                        Topic = topic,
+                        Records = records,
+                        Questions = questionInfos
+                    };
+                    parsedFiles.Add(parsedFile);
+                }
+
+                // Генерируем временный Excel файл
+                var tempExcelPath = Path.Combine(Path.GetTempPath(), $"temp_report_{Guid.NewGuid()}.xlsx");
+                try
+                {
+                    var generator = new TestReporter.Parser.Reporting.ReportGenerator();
+                    generator.GenerateReport(parsedFiles, tempExcelPath);
+
+                    // Открываем диалог печати
+                    var pd = new System.Windows.Controls.PrintDialog();
+                    if (pd.ShowDialog() == true)
+                    {
+                        PrintExcelWorkbook(tempExcelPath, pd);
+                        txtStatus.Text = "Документ отправлен на печать.";
+                    }
+                }
+                finally
+                {
+                    if (File.Exists(tempExcelPath))
+                        File.Delete(tempExcelPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Ошибка при печати: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void UpdateButtonsState()
         {
             bool hasFiles = _loadedFiles.Any();
             btnColumnMap.IsEnabled = hasFiles;
-            bool readyForReports = hasFiles; // allow report actions when files are present
+            bool readyForReports = hasFiles;
+            
             // toolbar buttons
             btnGenerate.IsEnabled = readyForReports;
             btnNewReport.IsEnabled = readyForReports;
             btnUpdateReport.IsEnabled = readyForReports;
             btnExportPdf.IsEnabled = readyForReports;
             btnPrint.IsEnabled = readyForReports;
-            // right-panel buttons (mirror toolbar) - update if present
+            
+            // right-panel buttons (mirror toolbar)
             try
             {
                 if (btnGeneratePanel != null) btnGeneratePanel.IsEnabled = readyForReports;
@@ -901,8 +1299,7 @@ namespace TestReporter
                 if (btnPrintPanel != null) btnPrintPanel.IsEnabled = readyForReports;
             }
             catch { }
-            // Разрешаем предпросмотр/применение фильтров даже до сопоставления столбцов,
-            // чтобы пользователь мог увидеть предварительный результат парсинга.
+            
             btnApplyFilters.IsEnabled = hasFiles;
         }
     }

@@ -1,22 +1,34 @@
-﻿using ClosedXML.Excel;
-using TestReporter.Models;
+﻿using TestReporter.Models;
 using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using System.Globalization;
+using ClosedXML.Excel;
 
 namespace TestReporter.Parser.Reporting;
 
+public enum AggregationMode
+{
+    Sum,      // Сумма баллов
+    Average   // Процент правильных ответов
+}
+
 public class ReportGenerator
 {
+    private AggregationMode _aggregationMode = AggregationMode.Sum;
+
+    public ReportGenerator(AggregationMode mode = AggregationMode.Sum)
+    {
+        _aggregationMode = mode;
+    }
+
     public void GenerateReport(List<ParsedFile> parsedFiles, string outputPath)
     {
         if (parsedFiles == null || parsedFiles.Count == 0)
             throw new ArgumentException("Нет данных для формирования отчёта.", nameof(parsedFiles));
 
         var allRecords = parsedFiles.SelectMany(f => f.Records).ToList();
-        var allQuestions = parsedFiles.SelectMany(f => f.Questions).ToList();
 
         using var workbook = new XLWorkbook();
 
@@ -28,28 +40,54 @@ public class ReportGenerator
         workbook.SaveAs(outputPath);
     }
 
+    private double CalculateScore(TestRecord record)
+    {
+        if (_aggregationMode == AggregationMode.Average)
+        {
+            // Процент правильных ответов
+            int correct = record.Answers.Count(a => a.Score == 1);
+            int total = record.Answers.Count();
+            return total > 0 ? Math.Round((double)correct / total * 100, 1) : 0;
+        }
+        else // Sum
+        {
+            return record.ComputedScore;
+        }
+    }
+
     private void GenerateAllGroupsSheet(XLWorkbook workbook, List<TestRecord> allRecords)
     {
         var sheet = workbook.Worksheets.Add("Все группы");
 
-        var headers = new[] { "Группа", "Студент", "Дата", "Тема", "Суммарный балл" };
+        var headers = new[] { "Группа", "Студент", "Дата", "Тема", _aggregationMode == AggregationMode.Average ? "% правильных" : "Суммарный балл" };
         WriteHeaders(sheet, headers);
 
-        var sorted = allRecords
-            .OrderBy(r => r.Group ?? string.Empty)
-            .ThenBy(r => r.FullName)
-            .ThenBy(r => r.CreatedAt ?? DateTime.MinValue)
-            .ThenBy(r => r.Topic)
+        var aggregated = allRecords
+            .GroupBy(r => new { r.Group, r.FullName, r.CreatedAt, r.Topic })
+            .Select(g => new
+            {
+                Group = g.Key.Group,
+                Student = g.Key.FullName,
+                Date = g.Key.CreatedAt,
+                Topic = g.Key.Topic,
+                Score = _aggregationMode == AggregationMode.Average
+                    ? Math.Round(g.SelectMany(r => r.Answers).Average(a => a.Score == 1 ? 100 : 0), 1)
+                    : g.Sum(r => r.ComputedScore)
+            })
+            .OrderBy(x => x.Group ?? string.Empty)
+            .ThenBy(x => x.Student)
+            .ThenBy(x => x.Date ?? DateTime.MinValue)
+            .ThenBy(x => x.Topic)
             .ToList();
 
         int row = 2;
-        foreach (var record in sorted)
+        foreach (var item in aggregated)
         {
-            sheet.Cell(row, 1).Value = record.Group ?? "(нет группы)";
-            sheet.Cell(row, 2).Value = record.FullName;
-            sheet.Cell(row, 3).Value = record.CreatedAt?.ToString("dd.MM.yyyy HH:mm") ?? "";
-            sheet.Cell(row, 4).Value = record.Topic;
-            sheet.Cell(row, 5).Value = record.ComputedScore;
+            sheet.Cell(row, 1).Value = item.Group ?? "";
+            sheet.Cell(row, 2).Value = item.Student;
+            sheet.Cell(row, 3).Value = item.Date?.ToString("dd.MM.yyyy HH:mm") ?? "";
+            sheet.Cell(row, 4).Value = item.Topic;
+            sheet.Cell(row, 5).Value = item.Score;
             row++;
         }
 
@@ -76,23 +114,33 @@ public class ReportGenerator
 
             var sheet = workbook.Worksheets.Add(sheetName);
 
-            var headers = new[] { "Студент", "Дата", "Тема", "Суммарный балл" };
+            var headers = new[] { "Студент", "Дата", "Тема", _aggregationMode == AggregationMode.Average ? "% правильных" : "Суммарный балл" };
             WriteHeaders(sheet, headers);
 
-            var groupRecords = allRecords
+            var aggregated = allRecords
                 .Where(r => r.Group == group)
-                .OrderBy(r => r.FullName)
-                .ThenBy(r => r.CreatedAt ?? DateTime.MinValue)
-                .ThenBy(r => r.Topic)
+                .GroupBy(r => new { r.FullName, r.CreatedAt, r.Topic })
+                .Select(g => new
+                {
+                    Student = g.Key.FullName,
+                    Date = g.Key.CreatedAt,
+                    Topic = g.Key.Topic,
+                    Score = _aggregationMode == AggregationMode.Average
+                        ? Math.Round(g.SelectMany(r => r.Answers).Average(a => a.Score == 1 ? 100 : 0), 1)
+                        : g.Sum(r => r.ComputedScore)
+                })
+                .OrderBy(x => x.Student)
+                .ThenBy(x => x.Date ?? DateTime.MinValue)
+                .ThenBy(x => x.Topic)
                 .ToList();
 
             int row = 2;
-            foreach (var record in groupRecords)
+            foreach (var item in aggregated)
             {
-                sheet.Cell(row, 1).Value = record.FullName;
-                sheet.Cell(row, 2).Value = record.CreatedAt?.ToString("dd.MM.yyyy HH:mm") ?? "";
-                sheet.Cell(row, 3).Value = record.Topic;
-                sheet.Cell(row, 4).Value = record.ComputedScore;
+                sheet.Cell(row, 1).Value = item.Student;
+                sheet.Cell(row, 2).Value = item.Date?.ToString("dd.MM.yyyy HH:mm") ?? "";
+                sheet.Cell(row, 3).Value = item.Topic;
+                sheet.Cell(row, 4).Value = item.Score;
                 row++;
             }
 
@@ -112,7 +160,7 @@ public class ReportGenerator
 
         var headers = new List<string> { "№", "ФИО" };
         headers.AddRange(topics);
-        headers.Add("Сумма баллов");
+        headers.Add(_aggregationMode == AggregationMode.Average ? "Средний %" : "Сумма баллов");
         WriteHeaders(sheet, headers.ToArray());
 
         var studentTopicScores = allRecords
@@ -122,7 +170,9 @@ public class ReportGenerator
                 g => g.GroupBy(r => r.Topic)
                       .ToDictionary(
                           tg => tg.Key,
-                          tg => tg.Sum(r => r.ComputedScore)
+                          tg => _aggregationMode == AggregationMode.Average
+                              ? Math.Round(tg.SelectMany(r => r.Answers).Average(a => a.Score == 1 ? 100 : 0), 1)
+                              : tg.Sum(r => r.ComputedScore)
                       )
             );
 
@@ -132,27 +182,28 @@ public class ReportGenerator
         int idx = 1;
         foreach (var student in students)
         {
-            sheet.Cell(row, 1).Value = idx++;
+            sheet.Cell(row, 1).Value = idx;
             sheet.Cell(row, 2).Value = student;
 
-            int totalSum = 0;
             int col = 3;
 
             foreach (var topic in topics)
             {
                 var score = studentTopicScores[student].GetValueOrDefault(topic, 0);
-                sheet.Cell(row, col).Value = score;
-                totalSum += score;
+                sheet.Cell(row, col).Value = score == 0 ? "" : score.ToString("F1");
                 col++;
             }
 
-            sheet.Cell(row, col).Value = totalSum;
-
+            // Последний столбец — формула среднего или суммы
             var firstDataCol = GetColumnLetter(3);
             var lastDataCol = GetColumnLetter(col - 1);
-            sheet.Cell(row, col).FormulaA1 = $"=SUM({firstDataCol}{row}:{lastDataCol}{row})";
+            if (_aggregationMode == AggregationMode.Average)
+                sheet.Cell(row, col).FormulaA1 = $"=AVERAGE({firstDataCol}{row}:{lastDataCol}{row})";
+            else
+                sheet.Cell(row, col).FormulaA1 = $"=SUM({firstDataCol}{row}:{lastDataCol}{row})";
 
             row++;
+            idx++;
         }
 
         FormatSheet(sheet, headers.Count, row - 1);
@@ -166,19 +217,12 @@ public class ReportGenerator
         var headers = new[] { "Тема", "Вопрос", "Правильных ответов", "Всего ответивших", "% правильных" };
         WriteHeaders(sheet, headers);
 
-        int row = 2;
+        var data = new List<(string Topic, string Question, int Correct, int Total, double Percentage)>();
 
-        foreach (var file in parsedFiles.OrderBy(f => f.Topic))
+        foreach (var file in parsedFiles)
         {
-            foreach (var question in file.Questions.Where(q => q.Type == QuestionType.Choice).OrderBy(q => q.Name))
+            foreach (var question in file.Questions.OrderBy(q => q.Name))
             {
-                sheet.Cell(row, 1).Value = file.Topic;
-
-                var qName = question.Name.Replace("\n", " ").Replace("  ", " ");
-                if (qName.Length > 100)
-                    qName = qName.Substring(0, 97) + "...";
-                sheet.Cell(row, 2).Value = qName;
-
                 int correctCount = 0;
                 int totalAnswered = 0;
 
@@ -193,21 +237,29 @@ public class ReportGenerator
                     }
                 }
 
-                sheet.Cell(row, 3).Value = correctCount;
-                sheet.Cell(row, 4).Value = totalAnswered;
-
-                if (totalAnswered > 0)
-                {
-                    var percentage = (double)correctCount / totalAnswered * 100;
-                    sheet.Cell(row, 5).Value = Math.Round(percentage, 1);
-                }
-                else
-                {
-                    sheet.Cell(row, 5).Value = 0;
-                }
-
-                row++;
+                var percentage = totalAnswered > 0 ? Math.Round((double)correctCount / totalAnswered * 100, 1) : 0.0;
+                data.Add((file.Topic, question.Name, correctCount, totalAnswered, percentage));
             }
+        }
+
+        // Сортируем: тема (алфавитно) → вопрос (алфавитно)
+        data = data.OrderBy(d => d.Topic).ThenBy(d => d.Question).ToList();
+
+        int row = 2;
+        foreach (var item in data)
+        {
+            sheet.Cell(row, 1).Value = item.Topic;
+
+            var qName = item.Question.Replace("\n", " ").Replace("  ", " ");
+            if (qName.Length > 100)
+                qName = qName.Substring(0, 97) + "...";
+            sheet.Cell(row, 2).Value = qName;
+
+            sheet.Cell(row, 3).Value = item.Correct;
+            sheet.Cell(row, 4).Value = item.Total;
+            sheet.Cell(row, 5).Value = item.Percentage;
+
+            row++;
         }
 
         FormatSheet(sheet, headers.Length, row - 1);

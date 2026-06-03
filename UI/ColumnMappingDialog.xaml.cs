@@ -1,16 +1,21 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
+using System.IO;
+using System.Text.Json;
 
 namespace TestReporter
 {
     public partial class ColumnMappingDialog : Window
     {
         private List<string> _headers = new List<string>();
+        private const string TemplatesDir = "MappingTemplates";
+        private const string TemplateExtension = ".json";
 
         public ColumnMappingDialog()
         {
             InitializeComponent();
+            LoadTemplateList();
         }
 
         // Установить обнаруженные заголовки и заполнить контролы
@@ -48,23 +53,56 @@ namespace TestReporter
             };
         }
 
+        private void LoadTemplateList()
+        {
+            try
+            {
+                if (!Directory.Exists(TemplatesDir))
+                    Directory.CreateDirectory(TemplatesDir);
+            }
+            catch { }
+        }
+
         private void OnSaveTemplateClick(object sender, RoutedEventArgs e)
         {
-            // TODO: Сохранить текущие сопоставления в файл-шаблон (JSON/XML)
-            System.Windows.MessageBox.Show("Шаблон сохранён (заглушка)", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+            var dialog = new System.Windows.Forms.SaveFileDialog();
+            dialog.Filter = "JSON Template|*.json";
+            dialog.InitialDirectory = TemplatesDir;
+            dialog.DefaultExt = ".json";
+
+            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                try
+                {
+                    var mapping = GetMapping();
+                    var json = JsonSerializer.Serialize(mapping, new JsonSerializerOptions { WriteIndented = true });
+                    File.WriteAllText(dialog.FileName, json);
+                    System.Windows.MessageBox.Show("Шаблон сохранён успешно.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"Ошибка при сохранении шаблона: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
 
         private void OnApplyMappingClick(object sender, RoutedEventArgs e)
         {
-            // TODO: Проверить, что ФИО выбрано
+            // Проверить, что ФИО выбрано
             if (cbNameColumn.SelectedItem == null)
             {
                 System.Windows.MessageBox.Show("Необходимо выбрать столбец для ФИО.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // TODO: собрать выбранные колонки вопросов
-            // Сохраняем настройки в модель приложения (заглушка)
+            // Проверить, что хотя бы один вопрос выбран
+            var selectedQuestions = SelectedQuestionColumns.Count();
+            if (selectedQuestions == 0)
+            {
+                System.Windows.MessageBox.Show("Необходимо выбрать хотя бы один столбец для вопросов.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             this.DialogResult = true;
             this.Close();
         }

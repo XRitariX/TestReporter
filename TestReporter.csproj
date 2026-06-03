@@ -18,7 +18,6 @@
 
   <ItemGroup>
     <Folder Include="Servise\IO\" />
-    <Folder Include="UI\" />
   </ItemGroup>
 
   <ItemGroup>
