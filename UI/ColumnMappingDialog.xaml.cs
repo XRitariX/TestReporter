@@ -18,6 +18,16 @@ namespace TestReporter
             LoadTemplateList();
         }
 
+        private void RefreshTemplateCombo()
+        {
+            try
+            {
+                var files = Directory.Exists(TemplatesDir) ? Directory.GetFiles(TemplatesDir, "*" + TemplateExtension) : new string[0];
+                cbTemplates.ItemsSource = files.Select(f => Path.GetFileName(f)).ToList();
+            }
+            catch { cbTemplates.ItemsSource = null; }
+        }
+
         // Установить обнаруженные заголовки и заполнить контролы
         public void PopulateHeaders(IEnumerable<string> headers)
         {
@@ -59,8 +69,39 @@ namespace TestReporter
             {
                 if (!Directory.Exists(TemplatesDir))
                     Directory.CreateDirectory(TemplatesDir);
+                RefreshTemplateCombo();
             }
             catch { }
+        }
+
+        private void OnLoadTemplateClick(object sender, RoutedEventArgs e)
+        {
+            if (cbTemplates.SelectedItem == null) return;
+            var file = Path.Combine(TemplatesDir, cbTemplates.SelectedItem.ToString());
+            try
+            {
+                var json = File.ReadAllText(file);
+                var mapping = System.Text.Json.JsonSerializer.Deserialize<Models.ColumnMapping>(json);
+                if (mapping == null) return;
+
+                // Apply template: set combo selections and checkboxes
+                if (!string.IsNullOrWhiteSpace(mapping.NameColumn) && _headers.Contains(mapping.NameColumn)) cbNameColumn.SelectedItem = mapping.NameColumn;
+                if (!string.IsNullOrWhiteSpace(mapping.GroupColumnName) && _headers.Contains(mapping.GroupColumnName)) cbGroupColumn.SelectedItem = mapping.GroupColumnName;
+                if (!string.IsNullOrWhiteSpace(mapping.DateColumnName) && _headers.Contains(mapping.DateColumnName)) cbDateColumn.SelectedItem = mapping.DateColumnName;
+                if (mapping.QuestionColumns != null)
+                {
+                    foreach (var ch in icQuestionColumns.Items.OfType<System.Windows.Controls.CheckBox>())
+                    {
+                        var txt = ch.Content?.ToString() ?? string.Empty;
+                        ch.IsChecked = mapping.QuestionColumns.Any(q => string.Equals(q, txt, System.StringComparison.OrdinalIgnoreCase));
+                    }
+                }
+                System.Windows.MessageBox.Show("Шаблон применён.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (System.Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Ошибка загрузки шаблона: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void OnSaveTemplateClick(object sender, RoutedEventArgs e)

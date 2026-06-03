@@ -140,10 +140,17 @@ public class CsvParser
             if (question.ScoreColumnIndex >= 0 && question.ScoreColumnIndex < headers.Count)
             {
                 var scoreStr = csv.GetField(question.ScoreColumnIndex)?.Trim();
-                if (int.TryParse(scoreStr, out var score))
-                    answer.Score = score;
-                else if (double.TryParse(scoreStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var dscore))
-                    answer.Score = (int)dscore;
+                var qname = (question.Name ?? string.Empty).ToLowerInvariant();
+                if (qname.Contains("id") || qname.Contains("ид"))
+                {
+                    answer.AnswerText = scoreStr;
+                    answer.Score = null;
+                }
+                else
+                {
+                    if (TestReporter.Parser.Utils.ValueParser.TryParseScore(scoreStr, out var score))
+                        answer.Score = score;
+                }
             }
 
             record.Answers.Add(answer);

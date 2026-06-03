@@ -67,7 +67,19 @@
                 <DockPanel>
                     <TabControl x:Name="tabPreview" Margin="6">
                         <TabItem Header="Детальный">
-                            <DataGrid x:Name="dgPreviewDetail" AutoGenerateColumns="True" IsReadOnly="True"/>
+                            <DataGrid x:Name="dgPreviewDetail" AutoGenerateColumns="False" IsReadOnly="True"
+                                      HorizontalScrollBarVisibility="Auto" CanUserResizeColumns="True" ColumnWidth="Auto">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Дата" Binding="{Binding TestDate, StringFormat=G}" Width="140" MinWidth="100" />
+                                    <DataGridTextColumn Header="ФИО" Binding="{Binding StudentName}" Width="2*" MinWidth="180" />
+                                    <DataGridTextColumn Header="Группа" Binding="{Binding GroupName}" Width="80" MinWidth="60" />
+                                    <DataGridTextColumn Header="Тема" Binding="{Binding TopicName}" Width="2*" MinWidth="160" />
+                                    <DataGridTextColumn Header="Вопрос" Binding="{Binding QuestionName}" Width="3*" MinWidth="220" />
+                                    <DataGridTextColumn Header="AnswerText" Binding="{Binding AnswerText}" Width="120" MinWidth="80" />
+                                    <DataGridTextColumn Header="Score" Binding="{Binding ScoreDisplay}" Width="60" MinWidth="40" />
+                                    <DataGridCheckBoxColumn Header="IsCorrect" Binding="{Binding IsCorrect, Mode=OneWay}" Width="60" MinWidth="40" />
+                                </DataGrid.Columns>
+                            </DataGrid>
                         </TabItem>
                         <TabItem Header="Матричный (агрегация)">
                             <DataGrid x:Name="dgPreviewMatrix" AutoGenerateColumns="True" IsReadOnly="True"/>

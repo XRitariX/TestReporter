@@ -162,10 +162,19 @@ public class ExcelParser
                 var scoreCell = row.Cell(question.ScoreColumnIndex + 1);
                 if (!scoreCell.IsEmpty())
                 {
-                    if (scoreCell.TryGetValue<int>(out var score))
-                        answer.Score = score;
-                    else if (double.TryParse(scoreCell.GetString(), out var dscore))
-                        answer.Score = (int)dscore;
+                    var s = scoreCell.GetString();
+                    var qname = (question.Name ?? string.Empty).ToLowerInvariant();
+                    // If this question looks like an ID field, do not treat numeric cell as score
+                    if (qname.Contains("id") || qname.Contains("ид"))
+                    {
+                        answer.AnswerText = scoreCell.IsEmpty() ? null : scoreCell.GetString()?.Trim();
+                        answer.Score = null;
+                    }
+                    else
+                    {
+                        if (TestReporter.Parser.Utils.ValueParser.TryParseScore(s, out var score))
+                            answer.Score = score;
+                    }
                 }
             }
 

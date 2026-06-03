@@ -32,6 +32,10 @@
                 </StackPanel>
 
                 <TextBlock FontWeight="Bold" Margin="0,8,0,4">Столбцы с вопросами (чекбоксы)</TextBlock>
+                <StackPanel Orientation="Horizontal" Margin="0,4">
+                    <ComboBox x:Name="cbTemplates" Width="260" Margin="0,0,8,0"/>
+                    <Button Content="Загрузить шаблон" Click="OnLoadTemplateClick"/>
+                </StackPanel>
                 <ScrollViewer Height="220">
                     <ItemsControl x:Name="icQuestionColumns">
                         <!-- каждый элемент: CheckBox с именем столбца -->

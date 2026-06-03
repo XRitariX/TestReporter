@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -10,6 +11,7 @@ using Microsoft.Win32;
 using TestReporter.Models;
 using System.Collections.Generic;
 using ClosedXML.Excel;
+using System.Globalization;
 
 namespace TestReporter
 {
@@ -33,6 +35,52 @@ namespace TestReporter
             dgQuestionStats.ItemsSource = _questionStats;
 
             UpdateButtonsState();
+        }
+
+        private static bool TryParseScore(string s, out int score)
+        {
+            score = 0;
+            if (string.IsNullOrWhiteSpace(s)) return false;
+            s = s.Trim();
+
+            // Accept negative numbers, decimals (take integer part), and numbers embedded in text
+            // First try direct parse with invariant culture
+            if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out score)) return true;
+            // Try with current culture
+            if (int.TryParse(s, NumberStyles.Integer, CultureInfo.CurrentCulture, out score)) return true;
+
+            // If decimal like 1.0 or -2.0, parse as double then cast if within int range
+            if (double.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out var d))
+            {
+                if (double.IsInfinity(d) || double.IsNaN(d)) return false;
+                if (d < int.MinValue || d > int.MaxValue) return false;
+                score = (int)Math.Truncate(d);
+                if (Math.Abs(score) > 1000) return false; // treat clearly invalid large scores as missing
+                return true;
+            }
+            if (double.TryParse(s, NumberStyles.Number, CultureInfo.CurrentCulture, out d))
+            {
+                if (double.IsInfinity(d) || double.IsNaN(d)) return false;
+                if (d < int.MinValue || d > int.MaxValue) return false;
+                score = (int)Math.Truncate(d);
+                if (Math.Abs(score) > 1000) return false;
+                return true;
+            }
+
+            // Extract first signed integer from string using regex and parse as long to avoid overflow
+            var m = Regex.Match(s, @"[-+]?\d+");
+            if (m.Success)
+            {
+                if (long.TryParse(m.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var l))
+                {
+                    if (l < int.MinValue || l > int.MaxValue) return false;
+                    score = (int)l;
+                    if (Math.Abs(score) > 1000) return false;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // Возвращает все записи из файла как IEnumerable<StudentAnswer>
@@ -372,14 +420,23 @@ namespace TestReporter
         {
             var dlg = new ColumnMappingDialog();
             dlg.Owner = this;
-
-            // Попытаемся обнаружить заголовки из первого загруженного файла
-            var first = _loadedFiles.FirstOrDefault();
-            if (first != null)
+            // Попытаемся обнаружить заголовки из ВСЕХ загруженных файлов и объединить (сохранить порядок первого вхождения)
+            var allHeaders = new List<string>();
+            foreach (var lf in _loadedFiles)
             {
-                IEnumerable<string> headers = DetectHeadersFromFile(first.FilePath);
-                dlg.PopulateHeaders(headers);
+                try
+                {
+                    var headers = DetectHeadersFromFile(lf.FilePath) ?? Enumerable.Empty<string>();
+                    foreach (var h in headers)
+                    {
+                        if (!allHeaders.Any(x => string.Equals(x, h, StringComparison.OrdinalIgnoreCase)))
+                            allHeaders.Add(h);
+                    }
+                }
+                catch { }
             }
+            if (allHeaders.Any())
+                dlg.PopulateHeaders(allHeaders);
 
             if (dlg.ShowDialog() == true)
             {

@@ -14,7 +14,22 @@ namespace TestReporter.Models
         public DateTime? TestDate { get; set; }
         public string QuestionName { get; set; } = string.Empty;
         public string? AnswerText { get; set; }
+        [System.ComponentModel.Browsable(false)]
         public int? Score { get; set; }
+
+        // Display-friendly score: show '-' for ID fields or empty when no score
+        public string ScoreDisplay
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(QuestionName) && (QuestionName.ToLowerInvariant().Contains("id") || QuestionName.ToLowerInvariant().Contains("ид")))
+                    return "-";
+                if (!Score.HasValue)
+                    return string.Empty;
+                return Score.Value.ToString();
+            }
+        }
+
         public bool IsCorrect => Score == 1;
     }
 }
