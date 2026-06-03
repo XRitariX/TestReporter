@@ -1,7 +1,7 @@
 {
-  "version": 3,
+  "version": 4,
   "targets": {
-    "net6.0-windows7.0": {
+    "net6.0-windows": {
       "AngleSharp/1.4.0": {
         "type": "package",
         "compile": {
@@ -561,7 +561,7 @@
     }
   },
   "projectFileDependencyGroups": {
-    "net6.0-windows7.0": [
+    "net6.0-windows": [
       "AngleSharp >= 1.4.0",
       "ClosedXML >= 0.105.0",
       "CsvHelper >= 33.1.0",
@@ -569,19 +569,24 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\sanka\\.nuget\\packages\\": {}
+    "C:\\Users\\timof\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\sanka\\Source\\Repos\\TestReporter\\TestReporter.csproj",
+      "projectUniqueName": "C:\\VS проеты\\TestReporter\\TestReporter.csproj",
       "projectName": "TestReporter",
-      "projectPath": "C:\\Users\\sanka\\Source\\Repos\\TestReporter\\TestReporter.csproj",
-      "packagesPath": "C:\\Users\\sanka\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\sanka\\Source\\Repos\\TestReporter\\obj\\",
+      "projectPath": "C:\\VS проеты\\TestReporter\\TestReporter.csproj",
+      "packagesPath": "C:\\Users\\timof\\.nuget\\packages\\",
+      "outputPath": "C:\\VS проеты\\TestReporter\\obj\\",
       "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
       "configFilePaths": [
-        "C:\\Users\\sanka\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\timof\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
@@ -592,7 +597,8 @@
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
-        "net6.0-windows7.0": {
+        "net6.0-windows": {
+          "framework": "net6.0-windows7.0",
           "targetAlias": "net6.0-windows",
           "projectReferences": {}
         }
@@ -607,10 +613,11 @@
         "auditLevel": "low",
         "auditMode": "direct"
       },
-      "SdkAnalysisLevel": "9.0.300"
+      "SdkAnalysisLevel": "10.0.300"
     },
     "frameworks": {
-      "net6.0-windows7.0": {
+      "net6.0-windows": {
+        "framework": "net6.0-windows7.0",
         "targetAlias": "net6.0-windows",
         "dependencies": {
           "AngleSharp": {
@@ -649,7 +656,7 @@
             "privateAssets": "none"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.314\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.300\\RuntimeIdentifierGraph.json"
       }
     }
   }
