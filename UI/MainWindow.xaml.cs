@@ -37,6 +37,23 @@ namespace TestReporter
             UpdateButtonsState();
         }
 
+        // Возвращает список ответов, на которых должно основываться создание отчёта.
+        // Если фильтры применены — используем отфильтрованный набор (_previewAnswers),
+        // иначе используем полный импорт (_allPreviewAnswers).
+        private List<StudentAnswer> GetEffectiveAnswers()
+        {
+            // Определим, есть ли активные фильтры: если количество в превью меньше полного — значит применён фильтр.
+            try
+            {
+                if (_previewAnswers != null && _previewAnswers.Count > 0 && _previewAnswers.Count < _allPreviewAnswers.Count)
+                {
+                    return _previewAnswers.Select(a => a).ToList();
+                }
+            }
+            catch { }
+            return _allPreviewAnswers.ToList();
+        }
+
         private static bool TryParseScore(string s, out int score)
         {
             score = 0;
@@ -731,31 +748,46 @@ namespace TestReporter
 
                 table.Columns.Add("Сумма", typeof(int));
 
-                // Агрегируем по студент-группа-дата-тема
-                var groups = recs.GroupBy(r => new { r.TopicName, r.StudentName, r.GroupName, r.TestDate });
-                foreach (var g in groups.OrderBy(x => x.Key.TopicName).ThenBy(x => x.Key.StudentName).ThenBy(x => x.Key.TestDate))
+                // Агрегируем по студент-тема (без разделения по дате)
+                var groups = recs.GroupBy(r => new { r.TopicName, r.StudentName });
+                foreach (var g in groups.OrderBy(x => x.Key.TopicName).ThenBy(x => x.Key.StudentName))
                 {
                     var row = table.NewRow();
                     row["Тема"] = g.Key.TopicName ?? string.Empty;
                     row["Студент"] = g.Key.StudentName ?? string.Empty;
-                    row["Группа"] = g.Key.GroupName ?? string.Empty;
-                    row["Дата"] = g.Key.TestDate.HasValue ? g.Key.TestDate.Value.ToString("dd.MM.yyyy") : string.Empty;
-                    
+                    // Для столбца Группа возьмём первое непустое значение (если есть)
+                    var firstGroup = g.Select(x => x.GroupName).FirstOrDefault(s => !string.IsNullOrWhiteSpace(s));
+                    row["Группа"] = firstGroup ?? string.Empty;
+                    // Дата в агрегированном режиме не отображаем (оставим пустой)
+                    row["Дата"] = string.Empty;
+
                     int rowSum = 0;
                     bool hasAnyData = false;
                     foreach (var q in questions)
                     {
-                        var ans = g.FirstOrDefault(x => string.Equals(x.QuestionName ?? string.Empty, q, StringComparison.OrdinalIgnoreCase));
-                        if (ans != null)
+                        // В агрегированном представлении считаем вопрос отвеченным правильно, если
+                        // для этой пары (студент,тема) есть хотя бы один ответ с Score==1 для данного вопроса.
+                        var correctExists = g.Any(x => string.Equals(x.QuestionName ?? string.Empty, q, StringComparison.OrdinalIgnoreCase) && x.Score == 1);
+                        if (correctExists)
                         {
-                            row[q] = ans.Score ?? 0;
-                            rowSum += ans.Score ?? 0;
+                            row[q] = 1;
+                            rowSum += 1;
                             hasAnyData = true;
                         }
                         else
-                            row[q] = DBNull.Value;
+                        {
+                            // Если для данного вопроса вообще есть хоть один ответ в группе — ставим 0, иначе DBNull
+                            var anyAnswerExists = g.Any(x => string.Equals(x.QuestionName ?? string.Empty, q, StringComparison.OrdinalIgnoreCase));
+                            if (anyAnswerExists)
+                            {
+                                row[q] = 0;
+                                hasAnyData = true;
+                            }
+                            else
+                                row[q] = DBNull.Value;
+                        }
                     }
-                    
+
                     // Добавляем строку только если есть хотя бы один ответ
                     if (hasAnyData)
                     {
@@ -771,14 +803,15 @@ namespace TestReporter
 
         private void OnGenerateReportClick(object sender, RoutedEventArgs e)
         {
-            if (_allPreviewAnswers.Count == 0)
+            var effectiveAnswers = GetEffectiveAnswers();
+            if (effectiveAnswers.Count == 0)
             {
                 System.Windows.MessageBox.Show("Нет данных для отчёта.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // Собираем ParsedFiles из StudentAnswer
-            var topics = _allPreviewAnswers
+            // Собираем ParsedFiles из StudentAnswer (используем отфильтрованные данные)
+            var topics = effectiveAnswers
                 .Select(a => a.TopicName)
                 .Distinct()
                 .ToList();
@@ -787,7 +820,7 @@ namespace TestReporter
 
             foreach (var topic in topics)
             {
-                var topicAnswers = _allPreviewAnswers
+                var topicAnswers = effectiveAnswers
                     .Where(a => a.TopicName == topic)
                     .ToList();
 
@@ -896,7 +929,8 @@ namespace TestReporter
 
         private void OnUpdateReportClick(object sender, RoutedEventArgs e)
         {
-            if (_allPreviewAnswers.Count == 0)
+            var effectiveAnswers = GetEffectiveAnswers();
+            if (effectiveAnswers.Count == 0)
             {
                 System.Windows.MessageBox.Show("Нет данных для обновления отчёта.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -913,8 +947,8 @@ namespace TestReporter
                 var bak = filePath + ".bak";
                 try { File.Copy(filePath, bak, true); } catch { }
 
-                // Собираем ParsedFiles из текущих данных
-                var topics = _allPreviewAnswers
+                // Собираем ParsedFiles из текущих данных (используем отфильтрованные данные)
+                var topics = effectiveAnswers
                     .Select(a => a.TopicName)
                     .Distinct()
                     .ToList();
@@ -923,7 +957,7 @@ namespace TestReporter
 
                 foreach (var topic in topics)
                 {
-                    var topicAnswers = _allPreviewAnswers
+                    var topicAnswers = effectiveAnswers
                         .Where(a => a.TopicName == topic)
                         .ToList();
 
@@ -989,7 +1023,8 @@ namespace TestReporter
 
         private void OnExportPdfClick(object sender, RoutedEventArgs e)
         {
-            if (_allPreviewAnswers.Count == 0)
+            var effectiveAnswers = GetEffectiveAnswers();
+            if (effectiveAnswers.Count == 0)
             {
                 System.Windows.MessageBox.Show("Нет данных для экспорта.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -1002,8 +1037,8 @@ namespace TestReporter
 
             try
             {
-                // Собираем ParsedFiles из текущих данных
-                var topics = _allPreviewAnswers
+                // Собираем ParsedFiles из текущих данных (используем отфильтрованные данные)
+                var topics = effectiveAnswers
                     .Select(a => a.TopicName)
                     .Distinct()
                     .ToList();
@@ -1012,7 +1047,7 @@ namespace TestReporter
 
                 foreach (var topic in topics)
                 {
-                    var topicAnswers = _allPreviewAnswers
+                    var topicAnswers = effectiveAnswers
                         .Where(a => a.TopicName == topic)
                         .ToList();
 

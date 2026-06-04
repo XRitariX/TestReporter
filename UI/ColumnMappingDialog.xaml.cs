@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -9,7 +10,7 @@ namespace TestReporter
     public partial class ColumnMappingDialog : Window
     {
         private List<string> _headers = new List<string>();
-        private const string TemplatesDir = "MappingTemplates";
+        private static readonly string TemplatesDir = System.IO.Path.Combine(AppContext.BaseDirectory ?? ".", "MappingTemplates");
         private const string TemplateExtension = ".json";
 
         public ColumnMappingDialog()
@@ -28,7 +29,7 @@ namespace TestReporter
             catch { cbTemplates.ItemsSource = null; }
         }
 
-        // Установить обнаруженные заголовки и заполнить контролы
+        // Установить обнаруженные заголовки и заполнить контролы.
         public void PopulateHeaders(IEnumerable<string> headers)
         {
             _headers = headers?.ToList() ?? new List<string>();
@@ -76,24 +77,43 @@ namespace TestReporter
 
         private void OnLoadTemplateClick(object sender, RoutedEventArgs e)
         {
-            if (cbTemplates.SelectedItem == null) return;
-            var file = Path.Combine(TemplatesDir, cbTemplates.SelectedItem.ToString());
+            string? file = null;
+            if (cbTemplates.SelectedItem != null)
+            {
+                var sel = cbTemplates.SelectedItem.ToString();
+                if (!string.IsNullOrWhiteSpace(sel))
+                {
+                    var inTemplates = Path.Combine(TemplatesDir, sel);
+                    if (File.Exists(inTemplates)) file = inTemplates;
+                    else if (File.Exists(sel)) file = sel; // maybe an absolute path was stored
+                }
+            }
+
+            if (file == null)
+            {
+                var ofd = new System.Windows.Forms.OpenFileDialog();
+                ofd.InitialDirectory = TemplatesDir;
+                ofd.Filter = "JSON Template|*.json";
+                if (ofd.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+                file = ofd.FileName;
+            }
+
             try
             {
                 var json = File.ReadAllText(file);
                 var mapping = System.Text.Json.JsonSerializer.Deserialize<Models.ColumnMapping>(json);
                 if (mapping == null) return;
 
-                // Apply template: set combo selections and checkboxes
-                if (!string.IsNullOrWhiteSpace(mapping.NameColumn) && _headers.Contains(mapping.NameColumn)) cbNameColumn.SelectedItem = mapping.NameColumn;
-                if (!string.IsNullOrWhiteSpace(mapping.GroupColumnName) && _headers.Contains(mapping.GroupColumnName)) cbGroupColumn.SelectedItem = mapping.GroupColumnName;
-                if (!string.IsNullOrWhiteSpace(mapping.DateColumnName) && _headers.Contains(mapping.DateColumnName)) cbDateColumn.SelectedItem = mapping.DateColumnName;
+                // Apply template: set combo selections and checkboxes (case-insensitive)
+                if (!string.IsNullOrWhiteSpace(mapping.NameColumn) && _headers.Any(h => string.Equals(h, mapping.NameColumn, StringComparison.OrdinalIgnoreCase))) cbNameColumn.SelectedItem = _headers.FirstOrDefault(h => string.Equals(h, mapping.NameColumn, StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrWhiteSpace(mapping.GroupColumnName) && _headers.Any(h => string.Equals(h, mapping.GroupColumnName, StringComparison.OrdinalIgnoreCase))) cbGroupColumn.SelectedItem = _headers.FirstOrDefault(h => string.Equals(h, mapping.GroupColumnName, StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrWhiteSpace(mapping.DateColumnName) && _headers.Any(h => string.Equals(h, mapping.DateColumnName, StringComparison.OrdinalIgnoreCase))) cbDateColumn.SelectedItem = _headers.FirstOrDefault(h => string.Equals(h, mapping.DateColumnName, StringComparison.OrdinalIgnoreCase));
                 if (mapping.QuestionColumns != null)
                 {
                     foreach (var ch in icQuestionColumns.Items.OfType<System.Windows.Controls.CheckBox>())
                     {
                         var txt = ch.Content?.ToString() ?? string.Empty;
-                        ch.IsChecked = mapping.QuestionColumns.Any(q => string.Equals(q, txt, System.StringComparison.OrdinalIgnoreCase));
+                        ch.IsChecked = mapping.QuestionColumns.Any(q => string.Equals(q, txt, StringComparison.OrdinalIgnoreCase));
                     }
                 }
                 System.Windows.MessageBox.Show("Шаблон применён.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -118,6 +138,8 @@ namespace TestReporter
                     var mapping = GetMapping();
                     var json = JsonSerializer.Serialize(mapping, new JsonSerializerOptions { WriteIndented = true });
                     File.WriteAllText(dialog.FileName, json);
+                        // Обновим список шаблонов, если сохранили в папку шаблонов
+                        try { RefreshTemplateCombo(); } catch { }
                     System.Windows.MessageBox.Show("Шаблон сохранён успешно.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
